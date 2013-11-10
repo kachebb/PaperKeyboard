@@ -10,9 +10,9 @@ import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Set;
-
 
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -28,7 +28,7 @@ import android.widget.Toast;
 public class MainActivity extends Activity implements RecBufListener {
 
 	private static final String LTAG = "Kaichen Debug";
-	private static final int THRESHOLD = 20000;
+	private static final int THRESHOLD = 1500;
 	private static final int CHUNKSIZE= 2000;
 	private static final int SAMPLERATE = 48000;
 	private static final int DIST = 20000;
@@ -38,7 +38,7 @@ public class MainActivity extends Activity implements RecBufListener {
 	
 	private InputStatus inputstatus;
 	
-	
+	private boolean finish = false;
 	private boolean AsycTaskRunning = false; 
 	
 	private static TextView text;
@@ -48,11 +48,14 @@ public class MainActivity extends Activity implements RecBufListener {
 	private RecBuffer mBuffer ;
 	private Set<InputStatus> elements;
 	Iterator<InputStatus> it; 
-	private int finish = 0;
 	
 	private ShortBuffer soundSamples;
 	private short[][] keyStrokesR;
 	private short[][] keyStrokesL;
+	
+	//two parameter for detectStroke and chunkdata_energy
+	private int windowSize = 50;
+	private int detectSize = 10;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -67,8 +70,12 @@ public class MainActivity extends Activity implements RecBufListener {
 		// register myself to RecBuffer to let it know I'm listening to him
 		this.register(mBuffer);
 		
-		soundSamples = ShortBuffer.allocate(SAMPLERATE*26);
-		//TODO here we suppose sound samples are at most 26s....
+		soundSamples = ShortBuffer.allocate(SAMPLERATE*26*2);
+		//TODO here we suppose sound samples are at most 26s, which make the app not robust....
+		
+		elements = EnumSet.allOf(InputStatus.class);
+		it = elements.iterator();
+		inputstatus = it.next();
 	}
 	
 	@Override
@@ -89,27 +96,53 @@ public class MainActivity extends Activity implements RecBufListener {
 		r.setReceiver(this);
 	}
 	
-	private int detectStroke(short[] data){
-		int i;
-		for(i=0; i<data.length; i++)
+	/***
+	 * detect Stroke in a data array
+	 * Method: move a small window in the array, if the energy last several sample in window is much larger than the first several.
+	 * Then we think keyStroke starts from current window.
+	 * @param idx : test the array from idx to the end
+	 * @param data : data array
+	 * @return : return the index of keystroke in the data array
+	 */
+	
+
+	private int detectStroke(int idx, short[] data){
+		int TIME = 3;
+		int startIdx = 0;
+		int endIdx = windowSize - detectSize;
+		int i,j;
+		int energy1, energy2;
+		int ret = -1;
+		for(i=idx;i < data.length - windowSize - 1; i++)
 		{
-			if(data[i] > THRESHOLD)
-				return i;
+			energy1 = 0;
+			energy2 = 0;
+			startIdx =i;
+			endIdx =i+windowSize - detectSize;
+			//TODO here it can be faster
+			for(j=0;j<detectSize; j++){
+				energy1 += data[startIdx+j]*data[startIdx+j];
+				energy2 += data[endIdx+j]*data[endIdx+j];	
+			}
+			if(energy2 > energy1*TIME){
+				ret = i;
+				break;
+			}
 		}
-		return -1;		
+		return ret;
 	}
 	
 	/**
 	 * this function will divide soundSamples(in shortBuffer) into chunks and save the chunks into keyStrokes
 	 * 
-	 *  @return number of chunks
+	 *  @return :number of chunks
 	 */
 	@SuppressLint("NewApi")
-	private int chunkData()
+	private int chunkData_threshold()
 	{
 		int i;
 		int count = 0;
-		short[] dataall = this.soundSamples.array();
+		short[] dataall = soundSamples.array();
 		int len = dataall.length/2;
 		short[][] data = new short[2][len];
 		//divide two channel
@@ -119,14 +152,45 @@ public class MainActivity extends Activity implements RecBufListener {
 			data[1][i] = dataall[2*i+1];
 		}
 		
-		
 		for(i=0;i< len; i++){
 			if(data[0][i] > THRESHOLD || data[0][i] < -THRESHOLD){
 				this.keyStrokesR[count] = Arrays.copyOfRange(data[0], i, i+CHUNKSIZE);
 				this.keyStrokesL[count] = Arrays.copyOfRange(data[1], i, i+CHUNKSIZE);
 				count++;
-				i+= DIST;//find nedsafdsafdxt peak, suppose two peak has at least DIST distance
+				i+= DIST;//find next peak, suppose two peak has at least DIST distance
 			}
+		}
+		return count;
+	}
+	
+	/***
+	 * chunk the data in soundSamples into keystroke, both are private value
+	 * @return : the chunk number in the sound Samples
+	 */
+	@SuppressLint("NewApi")
+	private int chunkData_energy()
+	{
+		int index = 0;
+		int i;
+		int count = 0; //return value: chunk number
+		short[] dataall = soundSamples.array();
+		int len = dataall.length/2+1;
+		short[][] data = new short[2][len];
+		//divide two channel
+		//TODO this can be done when detecting
+		for(i = 0; i < len-1; i++){
+			data[0][i] = dataall[2*i];
+			data[1][i] = dataall[2*i+1];
+		}
+		while(index < len - windowSize)
+		{
+			int peak = detectStroke(index,data[0]);
+			if(peak < 0)
+				return 0;
+			this.keyStrokesR[count] = Arrays.copyOfRange(data[0], peak, peak+CHUNKSIZE);
+			this.keyStrokesL[count] = Arrays.copyOfRange(data[1], peak, peak+CHUNKSIZE);
+			count++;
+			index+= DIST;//find next peak, suppose two peak has at least DIST distance		
 		}
 		return count;
 	}
@@ -159,7 +223,7 @@ public class MainActivity extends Activity implements RecBufListener {
 		 */
 		@Override
 		protected void onPreExecute() {
-		//	text.setText(inputstatus.toString()+ "\n"+"recording in 3 seconds");
+			text.setText(inputstatus.toString()+ "\n"+"is recording");
 			keyStrokesR = new short[26][CHUNKSIZE];
 			keyStrokesL = new short[26][CHUNKSIZE];
 			Toast.makeText(getApplicationContext(), "Please Wait Until This disappear",
@@ -192,87 +256,102 @@ public class MainActivity extends Activity implements RecBufListener {
 		@Override
 		protected void onPostExecute(Void params) {
 			//set inputs status to next and test if finished
-		//	String filename1 = Environment.getExternalStorageDirectory().toString()+File.separator + "NUM.wav";
-			text.setText("preparing");
-			int num = chunkData();
-			soundSamples.clear();
-			if(num != 26){
-				text.setText("expect 26 but we got" + String.valueOf(num));
+			int num = chunkData_threshold();
+			//TODO add trainning code here
+			
+			soundSamples = ShortBuffer.allocate(SAMPLERATE*26*2);
+			//TODO actually here I need to clear the buffer
+			if(num != ExpectedChunkNum[inputstatus.ordinal()]){
+				text.setText("expect " + String.valueOf(ExpectedChunkNum[inputstatus.ordinal()])+ "input but we got" + String.valueOf(num)+"\n Please input"+ inputstatus.toString() + " again:");
+				finish = false;
+			} 
+			else if(it.hasNext()){
+				InputStatus oldstatus = inputstatus;
+				inputstatus = it.next();
+				text.setText(oldstatus.toString() +" finished"+"\n" + "Click to input"+"\n" +inputstatus.toString());
+			}else{
+				text.setText("Finish Input Trainning Data");
 			}
-			
-			// save the chunks to file in order to make sure we chunk right.
-			int i;
-			for(i = 0;i<num;i++){
-				short[] data = new short[CHUNKSIZE];
-				data = keyStrokesR[i];
-				ByteBuffer myByteBuffer = ByteBuffer.allocate(data.length * 2);
-				Log.d(LTAG, String.valueOf(soundSamples.remaining()));
-				myByteBuffer.order(ByteOrder.BIG_ENDIAN);
-				ShortBuffer myShortBuffer = myByteBuffer.asShortBuffer();
-				myShortBuffer.put(data);
-				FileChannel out;
-				try {
-					File mFile = new File("/sdcard/recBuffer/recR"+String.valueOf(i)+ ".pcm");
-					if (!mFile.exists())
-						mFile.createNewFile();
-					out = new FileOutputStream(mFile, false).getChannel();
-					out.write(myByteBuffer);
-					out.close();
-				} catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
-					Log.d(LTAG, e.getMessage());
-					e.printStackTrace();
-					System.exit(1);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					Log.d(LTAG, e.getMessage());
-					e.printStackTrace();
-					System.exit(1);
-				}
+				/**
+				// save the chunks to file in order to make sure we chunk right.
+				int i;
+				for(i = 0;i<num;i++){
+					short[] data = new short[CHUNKSIZE];
+					data = keyStrokesR[i];
+					ByteBuffer myByteBuffer = ByteBuffer.allocate(data.length * 2);
+					Log.d(LTAG, String.valueOf(soundSamples.remaining()));
+					myByteBuffer.order(ByteOrder.BIG_ENDIAN);
+					ShortBuffer myShortBuffer = myByteBuffer.asShortBuffer();
+					myShortBuffer.put(data);
+					FileChannel out;
+					try {
+						File mFile = new File("/sdcard/recBuffer/recR"+String.valueOf(i)+ ".pcm");
+						if (!mFile.exists())
+							mFile.createNewFile();
+						out = new FileOutputStream(mFile, false).getChannel();
+						out.write(myByteBuffer);
+						out.close();
+					} catch (FileNotFoundException e) {
+						// TODO Auto-generated catch block
+						Log.d(LTAG, e.getMessage());
+						e.printStackTrace();
+						System.exit(1);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						Log.d(LTAG, e.getMessage());
+						e.printStackTrace();
+						System.exit(1);
+					}
+					
+					data = keyStrokesL[i];
+				//	myByteBuffer = ByteBuffer.allocate(data.length * 2);
+					Log.d(LTAG, String.valueOf(soundSamples.remaining()));
+					myByteBuffer.clear();
+					myByteBuffer.order(ByteOrder.BIG_ENDIAN);
+					myShortBuffer = myByteBuffer.asShortBuffer();
+					myShortBuffer.put(data);
 				
-				data = keyStrokesL[i];
-			//	myByteBuffer = ByteBuffer.allocate(data.length * 2);
-				Log.d(LTAG, String.valueOf(soundSamples.remaining()));
-				myByteBuffer.clear();
-				myByteBuffer.order(ByteOrder.BIG_ENDIAN);
-				myShortBuffer = myByteBuffer.asShortBuffer();
-				myShortBuffer.put(data);
-			
-				try {
-					File mFile = new File("/sdcard/recBuffer/recL"+String.valueOf(i)+ ".pcm");
-					if (!mFile.exists())
-						mFile.createNewFile();
-					out = new FileOutputStream(mFile, false).getChannel();
-					out.write(myByteBuffer);
-					out.close();
-				} catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
-					Log.d(LTAG, e.getMessage());
-					e.printStackTrace();
-					System.exit(1);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					Log.d(LTAG, e.getMessage());
-					e.printStackTrace();
-					System.exit(1);
-				}
-				
-				
-			}	
+					try {
+						File mFile = new File("/sdcard/recBuffer/recL"+String.valueOf(i)+ ".pcm");
+						if (!mFile.exists())
+							mFile.createNewFile();
+						out = new FileOutputStream(mFile, false).getChannel();
+						out.write(myByteBuffer);
+						out.close();
+					} catch (FileNotFoundException e) {
+						// TODO Auto-generated catch block
+						Log.d(LTAG, e.getMessage());
+						e.printStackTrace();
+						System.exit(1);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						Log.d(LTAG, e.getMessage());
+						e.printStackTrace();
+						System.exit(1);
+					}
+				}				
+				*/
 		}
 	}
 
 	
-	public void onClickButton(View view){
-		text.setText("test");
+	public void onClickButton(View view){		
 		if(AsycTaskRunning){
 			AsycTaskRunning = false;
-			recordingThread.interrupt();			
+			recordingThread.interrupt();
+			if(!it.hasNext()){
+				finish = true;
+			}
 		}
 		else{
+			if(finish){
+				finish();
+				System.exit(0);
+			}
 			new StartRecTask().execute();
-			AsycTaskRunning =true;
 			//TODO do we need to delete this after use?
+			AsycTaskRunning =true;
+			
 		}
 	}
 
