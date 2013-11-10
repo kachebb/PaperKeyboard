@@ -14,6 +14,8 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import edu.wisc.jj.SPUtil;
+
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.annotation.SuppressLint;
@@ -32,6 +34,7 @@ public class MainActivity extends Activity implements RecBufListener {
 	private static final int CHUNKSIZE= 2000;
 	private static final int SAMPLERATE = 48000;
 	private static final int DIST = 20000;
+
 	private enum InputStatus{AtoZ, NUM, LEFT, RIGHT, BOTTOM}
 	//expected chunk number in each stage
 	private final int[] ExpectedChunkNum = {26, 12, 4, 11, 7};
@@ -272,10 +275,8 @@ public class MainActivity extends Activity implements RecBufListener {
 		//cnt++;
 		Log.d(LTAG, "I'm called at time: " + System.nanoTime() + "cnt number : " + cnt);
 		soundSamples.put(data);
-		
 	}
 	
-
 	
 	private class StartRecTask extends AsyncTask<Void, Void, Void> {
 		/**
@@ -318,7 +319,7 @@ public class MainActivity extends Activity implements RecBufListener {
 		@Override
 		protected void onPostExecute(Void params) {
 			//set inputs status to next and test if finished
-			int num = chunkData_newMethod();
+			int num = chunkData_threshold();
 			//TODO add trainning code here
 			
 			soundSamples = ShortBuffer.allocate(SAMPLERATE*26*2);
