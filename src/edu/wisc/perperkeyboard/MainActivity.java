@@ -28,7 +28,7 @@ import android.widget.Toast;
 public class MainActivity extends Activity implements RecBufListener {
 
 	private static final String LTAG = "Kaichen Debug";
-	private static final int THRESHOLD = 1500;
+	private static final int THRESHOLD = 600;
 	private static final int CHUNKSIZE= 2000;
 	private static final int SAMPLERATE = 48000;
 	private static final int DIST = 20000;
@@ -73,6 +73,12 @@ public class MainActivity extends Activity implements RecBufListener {
 		soundSamples = ShortBuffer.allocate(SAMPLERATE*26*2);
 		//TODO here we suppose sound samples are at most 26s, which make the app not robust....
 		
+		keyStrokesR = new short[50][CHUNKSIZE];
+		keyStrokesL = new short[50][CHUNKSIZE];
+		//TODO here we suppose sound samples are at most 50 key stroke, which make the app not robust....
+		
+		
+		//iterator for input stage
 		elements = EnumSet.allOf(InputStatus.class);
 		it = elements.iterator();
 		inputstatus = it.next();
@@ -96,41 +102,6 @@ public class MainActivity extends Activity implements RecBufListener {
 		r.setReceiver(this);
 	}
 	
-	/***
-	 * detect Stroke in a data array
-	 * Method: move a small window in the array, if the energy last several sample in window is much larger than the first several.
-	 * Then we think keyStroke starts from current window.
-	 * @param idx : test the array from idx to the end
-	 * @param data : data array
-	 * @return : return the index of keystroke in the data array
-	 */
-	
-
-	private int detectStroke(int idx, short[] data){
-		int TIME = 3;
-		int startIdx = 0;
-		int endIdx = windowSize - detectSize;
-		int i,j;
-		int energy1, energy2;
-		int ret = -1;
-		for(i=idx;i < data.length - windowSize - 1; i++)
-		{
-			energy1 = 0;
-			energy2 = 0;
-			startIdx =i;
-			endIdx =i+windowSize - detectSize;
-			//TODO here it can be faster
-			for(j=0;j<detectSize; j++){
-				energy1 += data[startIdx+j]*data[startIdx+j];
-				energy2 += data[endIdx+j]*data[endIdx+j];	
-			}
-			if(energy2 > energy1*TIME){
-				ret = i;
-				break;
-			}
-		}
-		return ret;
-	}
 	
 	/**
 	 * this function will divide soundSamples(in shortBuffer) into chunks and save the chunks into keyStrokes
@@ -163,12 +134,78 @@ public class MainActivity extends Activity implements RecBufListener {
 		return count;
 	}
 	
+	
+	/***
+	 * detect Stroke in a data array
+	 * Method: move a small window in the array, if the energy last several sample in window is much larger than the first several.
+	 * Then we think keyStroke starts from current window.
+	 * @param idx : test the array from idx to the end
+	 * @param data : data array
+	 * @return : return the index of keystroke in the data array
+	 */
+	
+
+	private int detectStroke_energy(int idx, short[] data){
+		int TIME = 100;
+		int startIdx = 0;
+		int endIdx = windowSize - detectSize;
+		int i,j;
+		int energy1, energy2;
+		int ret = -1;
+		for(i=idx;i < data.length - windowSize - 1; i+= windowSize)
+		{
+			energy1 = 0;
+			energy2 = 0;
+			startIdx =i;
+			endIdx =i+windowSize - detectSize;
+			//TODO here it can be faster
+			for(j=0;j<detectSize; j++){
+				energy1 += data[startIdx+j]*data[startIdx+j];
+				energy2 += data[endIdx+j]*data[endIdx+j];	
+			}
+			energy1 *= TIME;
+			if(energy2 > energy1){
+				ret = i;
+				break;
+			}
+		}
+		return ret;
+	}
+	
+	private int detectStroke_threshold(int idx, short[] data){
+		int startIdx = 0;
+		int endIdx = windowSize - detectSize;
+		int i,j;
+		int count1, count2;
+		int ret = -1;
+		for(i=idx;i < data.length - windowSize - 1; i++)
+		{
+			count1 = 0;
+			count2 = 0;
+			startIdx =i;
+			endIdx =i+windowSize - detectSize;
+			for(j=0;j<detectSize; j++){
+				if(data[startIdx+j] > THRESHOLD)
+					count1++;
+				if(data[endIdx+j] > THRESHOLD)
+					count2++;
+			}
+			if(count1 <2 && count2 >=6)
+			{
+				ret = i;
+				break;
+			}	
+		}
+		return ret;
+	}
+	
+	
 	/***
 	 * chunk the data in soundSamples into keystroke, both are private value
 	 * @return : the chunk number in the sound Samples
 	 */
 	@SuppressLint("NewApi")
-	private int chunkData_energy()
+	private int chunkData_newMethod()
 	{
 		int index = 0;
 		int i;
@@ -182,15 +219,40 @@ public class MainActivity extends Activity implements RecBufListener {
 			data[0][i] = dataall[2*i];
 			data[1][i] = dataall[2*i+1];
 		}
+		ByteBuffer myByteBuffer = ByteBuffer.allocate(data[0].length * 2);
+		Log.d(LTAG, String.valueOf(soundSamples.remaining()));
+		myByteBuffer.order(ByteOrder.BIG_ENDIAN);
+		ShortBuffer myShortBuffer = myByteBuffer.asShortBuffer();
+		myShortBuffer.put(data[0]);
+		FileChannel out;
+		try {
+			File mFile = new File("/sdcard/recBuffer/recR"+ ".pcm");
+			if (!mFile.exists())
+				mFile.createNewFile();
+			out = new FileOutputStream(mFile, false).getChannel();
+			out.write(myByteBuffer);
+			out.close();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			Log.d(LTAG, e.getMessage());
+			e.printStackTrace();
+			System.exit(1);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			Log.d(LTAG, e.getMessage());
+			e.printStackTrace();
+			System.exit(1);
+		}
 		while(index < len - windowSize)
 		{
-			int peak = detectStroke(index,data[0]);
-			if(peak < 0)
-				return 0;
-			this.keyStrokesR[count] = Arrays.copyOfRange(data[0], peak, peak+CHUNKSIZE);
-			this.keyStrokesL[count] = Arrays.copyOfRange(data[1], peak, peak+CHUNKSIZE);
-			count++;
-			index+= DIST;//find next peak, suppose two peak has at least DIST distance		
+			int peak = detectStroke_threshold(index,data[0]);
+			if(peak > 0)
+			{
+				this.keyStrokesR[count] = Arrays.copyOfRange(data[0], peak, peak+CHUNKSIZE);
+				this.keyStrokesL[count] = Arrays.copyOfRange(data[1], peak, peak+CHUNKSIZE);
+				count++;	
+			}
+			index+= DIST;//find next peak, suppose two peaks have at least DIST distance	
 		}
 		return count;
 	}
@@ -256,7 +318,7 @@ public class MainActivity extends Activity implements RecBufListener {
 		@Override
 		protected void onPostExecute(Void params) {
 			//set inputs status to next and test if finished
-			int num = chunkData_threshold();
+			int num = chunkData_newMethod();
 			//TODO add trainning code here
 			
 			soundSamples = ShortBuffer.allocate(SAMPLERATE*26*2);
