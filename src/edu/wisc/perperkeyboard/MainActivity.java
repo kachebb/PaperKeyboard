@@ -14,6 +14,8 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import edu.wisc.jj.SPUtil;
+
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.annotation.SuppressLint;
@@ -32,10 +34,6 @@ public class MainActivity extends Activity implements RecBufListener {
 	private static final int CHUNKSIZE= 2000;
 	private static final int SAMPLERATE = 48000;
 	private static final int DIST = 20000;
-	//two parameter for detectStroke and chunkdata_energy
-	private int windowSize = 50;
-	private int detectSize = 10;
-	
 	private enum InputStatus{AtoZ, NUM, LEFT, RIGHT, BOTTOM}
 	//expected chunk number in each stage
 	private final int[] ExpectedChunkNum = {26, 12, 4, 11, 7};
@@ -102,175 +100,8 @@ public class MainActivity extends Activity implements RecBufListener {
 		// set receiving thread to be this class
 		r.setReceiver(this);
 	}
+
 	
-	
-	/**
-	 * this function will divide soundSamples(in shortBuffer) into chunks and save the chunks into keyStrokes
-	 * 
-	 *  @return :number of chunks
-	 */
-	@SuppressLint("NewApi")
-	private int chunkData_threshold()
-	{
-		int i;
-		int count = 0;
-		short[] dataall1 = soundSamples.array();
-		short[] dataall = new short[bufferSize];
-		//remove the last 5000 sample points because touch screen will also cause sample peak
-		for(i=0; i< bufferSize - 5000; i++)
-			dataall[i] = dataall1[i];
-		int len = dataall.length/2;
-		short[][] data = new short[2][len];
-		//divide two channel
-		//TODO this can be done when detecting
-		for(i = 0; i < len; i++){
-			data[0][i] = dataall[2*i];
-			data[1][i] = dataall[2*i+1];
-		}
-		for(i=0;i< len; i++){
-			if(data[0][i] > THRESHOLD || data[0][i] < -THRESHOLD){
-				int j;
-				int energy1 = 0;
-				int energy2 = 0;
-				for(j=0;j<100;j++){
-					if(i-j-1 >= 0)
-					{
-						energy1 += data[0][i-j-1];
-						energy2 += data[0][i+j];
-					}
-				}					
-				if(energy1*25 < energy2){
-					this.keyStrokesR[count] = Arrays.copyOfRange(data[0], i, i+CHUNKSIZE);
-					this.keyStrokesL[count] = Arrays.copyOfRange(data[1], i, i+CHUNKSIZE);
-					count++;
-					i+= DIST;//find next peak, suppose two peak has at least DIST distance
-				}
-			}
-		}
-		return count;
-	}
-	
-	
-	/***
-	 * detect Stroke in a data array
-	 * Method: move a small window in the array, if the energy last several sample in window is much larger than the first several.
-	 * Then we think keyStroke starts from current window.
-	 * @param idx : test the array from idx to the end
-	 * @param data : data array
-	 * @return : return the index of keystroke in the data array
-	 */
-	private int detectStroke_energy(short[] data){
-		int TIME = 100;
-		int startIdx = 0;
-		int endIdx = windowSize - detectSize;
-		int i,j;
-		int energy1, energy2;
-		int ret = -1;
-		for(i=0;i < data.length - windowSize - 1; i+= windowSize)
-		{
-			energy1 = 0;
-			energy2 = 0;
-			startIdx =i;
-			endIdx =i+windowSize - detectSize;
-			//TODO here it can be faster
-			for(j=0;j<detectSize; j++){
-				energy1 += data[startIdx+j]*data[startIdx+j];
-				energy2 += data[endIdx+j]*data[endIdx+j];	
-			}
-			energy1 *= TIME;
-			if(energy2 > energy1){
-				ret = i;
-				break;
-			}
-		}
-		return ret;
-		
-	}
-	
-	
-	
-	
-	private int detectStroke_threshold(short[] data){
-		int i;
-		int len = data.length;
-		int win = 100;
-		for(i=0;i< len; i++){
-			if(data[i] > THRESHOLD || data[i] < -THRESHOLD){
-				int j;
-				int energy1 = 0;
-				int energy2 = 0;
-				for(j=0;j<win;j++){
-					if(i-j-1 >= 0)
-					{
-						energy1 += data[i-j-1];
-						energy2 += data[i+j];
-					}
-				}					
-				if(energy1*25 < energy2){
-					return i;
-				}
-			}
-		}
-		return -1;
-	}
-	
-	
-	/***
-	 * chunk the data in soundSamples into keystroke, both are private value
-	 * @return : the chunk number in the sound Samples
-	 */
-	@SuppressLint("NewApi")
-	private int chunkData_newMethod()
-	{
-		int index = 0;
-		int i;
-		int count = 0; //return value: chunk number
-		short[] dataall = soundSamples.array();
-		int len = dataall.length/2+1;
-		short[][] data = new short[2][len];
-		//divide two channel
-		//TODO this can be done when detecting
-		for(i = 0; i < len-1; i++){
-			data[0][i] = dataall[2*i];
-			data[1][i] = dataall[2*i+1];
-		}
-		ByteBuffer myByteBuffer = ByteBuffer.allocate(data[0].length * 2);
-		Log.d(LTAG, String.valueOf(soundSamples.remaining()));
-		myByteBuffer.order(ByteOrder.BIG_ENDIAN);
-		ShortBuffer myShortBuffer = myByteBuffer.asShortBuffer();
-		myShortBuffer.put(data[0]);
-		FileChannel out;
-		try {
-			File mFile = new File("/sdcard/recBuffer/recR"+ ".pcm");
-			if (!mFile.exists())
-				mFile.createNewFile();
-			out = new FileOutputStream(mFile, false).getChannel();
-			out.write(myByteBuffer);
-			out.close();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			Log.d(LTAG, e.getMessage());
-			e.printStackTrace();
-			System.exit(1);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			Log.d(LTAG, e.getMessage());
-			e.printStackTrace();
-			System.exit(1);
-		}
-		while(index < len - windowSize)
-		{
-			int peak = detectStroke_energy(data[0]);
-			if(peak > 0)
-			{
-				this.keyStrokesR[count] = Arrays.copyOfRange(data[0], peak, peak+CHUNKSIZE);
-				this.keyStrokesL[count] = Arrays.copyOfRange(data[1], peak, peak+CHUNKSIZE);
-				count++;	
-			}
-			index+= DIST;//find next peak, suppose two peaks have at least DIST distance	
-		}
-		return count;
-	}
 	
 	
 	
@@ -288,10 +119,8 @@ public class MainActivity extends Activity implements RecBufListener {
 		Log.d(LTAG, "I'm called at time: " + System.nanoTime() + "cnt number : " + cnt);
 		soundSamples.put(data);
 		bufferSize += data.length;
-		
 	}
 	
-
 	
 	private class StartRecTask extends AsyncTask<Void, Void, Void> {
 		/**
