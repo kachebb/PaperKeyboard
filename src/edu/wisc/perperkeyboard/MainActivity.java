@@ -28,10 +28,14 @@ import android.widget.Toast;
 public class MainActivity extends Activity implements RecBufListener {
 
 	private static final String LTAG = "Kaichen Debug";
-	private static final int THRESHOLD = 600;
+	private static final int THRESHOLD = 200;
 	private static final int CHUNKSIZE= 2000;
 	private static final int SAMPLERATE = 48000;
 	private static final int DIST = 20000;
+	//two parameter for detectStroke and chunkdata_energy
+	private int windowSize = 50;
+	private int detectSize = 10;
+	
 	private enum InputStatus{AtoZ, NUM, LEFT, RIGHT, BOTTOM}
 	//expected chunk number in each stage
 	private final int[] ExpectedChunkNum = {26, 12, 4, 11, 7};
@@ -50,12 +54,9 @@ public class MainActivity extends Activity implements RecBufListener {
 	Iterator<InputStatus> it; 
 	
 	private ShortBuffer soundSamples;
+	private int bufferSize = 0;
 	private short[][] keyStrokesR;
 	private short[][] keyStrokesL;
-	
-	//two parameter for detectStroke and chunkdata_energy
-	private int windowSize = 50;
-	private int detectSize = 10;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -113,7 +114,11 @@ public class MainActivity extends Activity implements RecBufListener {
 	{
 		int i;
 		int count = 0;
-		short[] dataall = soundSamples.array();
+		short[] dataall1 = soundSamples.array();
+		short[] dataall = new short[bufferSize];
+		//remove the last 5000 sample points because touch screen will also cause sample peak
+		for(i=0; i< bufferSize - 5000; i++)
+			dataall[i] = dataall1[i];
 		int len = dataall.length/2;
 		short[][] data = new short[2][len];
 		//divide two channel
@@ -122,13 +127,24 @@ public class MainActivity extends Activity implements RecBufListener {
 			data[0][i] = dataall[2*i];
 			data[1][i] = dataall[2*i+1];
 		}
-		
 		for(i=0;i< len; i++){
 			if(data[0][i] > THRESHOLD || data[0][i] < -THRESHOLD){
-				this.keyStrokesR[count] = Arrays.copyOfRange(data[0], i, i+CHUNKSIZE);
-				this.keyStrokesL[count] = Arrays.copyOfRange(data[1], i, i+CHUNKSIZE);
-				count++;
-				i+= DIST;//find next peak, suppose two peak has at least DIST distance
+				int j;
+				int energy1 = 0;
+				int energy2 = 0;
+				for(j=0;j<100;j++){
+					if(i-j-1 >= 0)
+					{
+						energy1 += data[0][i-j-1];
+						energy2 += data[0][i+j];
+					}
+				}					
+				if(energy1*25 < energy2){
+					this.keyStrokesR[count] = Arrays.copyOfRange(data[0], i, i+CHUNKSIZE);
+					this.keyStrokesL[count] = Arrays.copyOfRange(data[1], i, i+CHUNKSIZE);
+					count++;
+					i+= DIST;//find next peak, suppose two peak has at least DIST distance
+				}
 			}
 		}
 		return count;
@@ -143,16 +159,14 @@ public class MainActivity extends Activity implements RecBufListener {
 	 * @param data : data array
 	 * @return : return the index of keystroke in the data array
 	 */
-	
-
-	private int detectStroke_energy(int idx, short[] data){
+	private int detectStroke_energy(short[] data){
 		int TIME = 100;
 		int startIdx = 0;
 		int endIdx = windowSize - detectSize;
 		int i,j;
 		int energy1, energy2;
 		int ret = -1;
-		for(i=idx;i < data.length - windowSize - 1; i+= windowSize)
+		for(i=0;i < data.length - windowSize - 1; i+= windowSize)
 		{
 			energy1 = 0;
 			energy2 = 0;
@@ -170,33 +184,34 @@ public class MainActivity extends Activity implements RecBufListener {
 			}
 		}
 		return ret;
+		
 	}
 	
-	private int detectStroke_threshold(int idx, short[] data){
-		int startIdx = 0;
-		int endIdx = windowSize - detectSize;
-		int i,j;
-		int count1, count2;
-		int ret = -1;
-		for(i=idx;i < data.length - windowSize - 1; i++)
-		{
-			count1 = 0;
-			count2 = 0;
-			startIdx =i;
-			endIdx =i+windowSize - detectSize;
-			for(j=0;j<detectSize; j++){
-				if(data[startIdx+j] > THRESHOLD)
-					count1++;
-				if(data[endIdx+j] > THRESHOLD)
-					count2++;
+	
+	
+	
+	private int detectStroke_threshold(short[] data){
+		int i;
+		int len = data.length;
+		int win = 100;
+		for(i=0;i< len; i++){
+			if(data[i] > THRESHOLD || data[i] < -THRESHOLD){
+				int j;
+				int energy1 = 0;
+				int energy2 = 0;
+				for(j=0;j<win;j++){
+					if(i-j-1 >= 0)
+					{
+						energy1 += data[i-j-1];
+						energy2 += data[i+j];
+					}
+				}					
+				if(energy1*25 < energy2){
+					return i;
+				}
 			}
-			if(count1 <2 && count2 >=6)
-			{
-				ret = i;
-				break;
-			}	
 		}
-		return ret;
+		return -1;
 	}
 	
 	
@@ -245,7 +260,7 @@ public class MainActivity extends Activity implements RecBufListener {
 		}
 		while(index < len - windowSize)
 		{
-			int peak = detectStroke_threshold(index,data[0]);
+			int peak = detectStroke_energy(data[0]);
 			if(peak > 0)
 			{
 				this.keyStrokesR[count] = Arrays.copyOfRange(data[0], peak, peak+CHUNKSIZE);
@@ -272,6 +287,7 @@ public class MainActivity extends Activity implements RecBufListener {
 		//cnt++;
 		Log.d(LTAG, "I'm called at time: " + System.nanoTime() + "cnt number : " + cnt);
 		soundSamples.put(data);
+		bufferSize += data.length;
 		
 	}
 	
@@ -318,10 +334,11 @@ public class MainActivity extends Activity implements RecBufListener {
 		@Override
 		protected void onPostExecute(Void params) {
 			//set inputs status to next and test if finished
-			int num = chunkData_newMethod();
+			int num = chunkData_threshold();
 			//TODO add trainning code here
 			
 			soundSamples = ShortBuffer.allocate(SAMPLERATE*26*2);
+			bufferSize = 0;
 			//TODO actually here I need to clear the buffer
 			if(num != ExpectedChunkNum[inputstatus.ordinal()]){
 				text.setText("expect " + String.valueOf(ExpectedChunkNum[inputstatus.ordinal()])+ "input but we got" + String.valueOf(num)+"\n Please input"+ inputstatus.toString() + " again:");
@@ -334,69 +351,13 @@ public class MainActivity extends Activity implements RecBufListener {
 			}else{
 				text.setText("Finish Input Trainning Data");
 			}
-				/**
-				// save the chunks to file in order to make sure we chunk right.
-				int i;
-				for(i = 0;i<num;i++){
-					short[] data = new short[CHUNKSIZE];
-					data = keyStrokesR[i];
-					ByteBuffer myByteBuffer = ByteBuffer.allocate(data.length * 2);
-					Log.d(LTAG, String.valueOf(soundSamples.remaining()));
-					myByteBuffer.order(ByteOrder.BIG_ENDIAN);
-					ShortBuffer myShortBuffer = myByteBuffer.asShortBuffer();
-					myShortBuffer.put(data);
-					FileChannel out;
-					try {
-						File mFile = new File("/sdcard/recBuffer/recR"+String.valueOf(i)+ ".pcm");
-						if (!mFile.exists())
-							mFile.createNewFile();
-						out = new FileOutputStream(mFile, false).getChannel();
-						out.write(myByteBuffer);
-						out.close();
-					} catch (FileNotFoundException e) {
-						// TODO Auto-generated catch block
-						Log.d(LTAG, e.getMessage());
-						e.printStackTrace();
-						System.exit(1);
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						Log.d(LTAG, e.getMessage());
-						e.printStackTrace();
-						System.exit(1);
-					}
-					
-					data = keyStrokesL[i];
-				//	myByteBuffer = ByteBuffer.allocate(data.length * 2);
-					Log.d(LTAG, String.valueOf(soundSamples.remaining()));
-					myByteBuffer.clear();
-					myByteBuffer.order(ByteOrder.BIG_ENDIAN);
-					myShortBuffer = myByteBuffer.asShortBuffer();
-					myShortBuffer.put(data);
-				
-					try {
-						File mFile = new File("/sdcard/recBuffer/recL"+String.valueOf(i)+ ".pcm");
-						if (!mFile.exists())
-							mFile.createNewFile();
-						out = new FileOutputStream(mFile, false).getChannel();
-						out.write(myByteBuffer);
-						out.close();
-					} catch (FileNotFoundException e) {
-						// TODO Auto-generated catch block
-						Log.d(LTAG, e.getMessage());
-						e.printStackTrace();
-						System.exit(1);
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						Log.d(LTAG, e.getMessage());
-						e.printStackTrace();
-						System.exit(1);
-					}
-				}				
-				*/
 		}
 	}
 
-	
+	/***
+	 * this function is called when button is click
+	 * @param view
+	 */
 	public void onClickButton(View view){		
 		if(AsycTaskRunning){
 			AsycTaskRunning = false;
