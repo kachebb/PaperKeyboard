@@ -125,7 +125,7 @@ public class SPUtil {
 	 * @param data
 	 * @return
 	 */
-	public static double[] shortArrayToDouble(short[] data){
+	private static double[] shortArrayToDouble(short[] data){
 		double[] result= new double[data.length];
 		for (int row=0;row<data.length;row++){
 			result[row]=(double)data[row];
@@ -137,7 +137,7 @@ public class SPUtil {
 	 * get key stroke features to use as input features for KNN
 	 * @param data: 2-D data, row 0 -- left channel, row 1 -- right channel
 	 */
-	public double[] getAudioFeatures(short[][] data){
+	public static double[] getAudioFeatures(short[][] data){
 		double[] leftData=SPUtil.shortArrayToDouble(data[0]);
 		double[] rightData=SPUtil.shortArrayToDouble(data[1]);		
 		//get fft

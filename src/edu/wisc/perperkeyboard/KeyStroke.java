@@ -10,7 +10,7 @@ public class KeyStroke {
 	private int detectSize = 10;
 	
 	
-	public short[][] seperateChannels(short[] dataAll)
+	public static short[][] seperateChannels(short[] dataAll)
 	{
 		short[][] twoChannels = new short[2][CHUNKSIZE];
 		int i;
@@ -24,20 +24,23 @@ public class KeyStroke {
 	}
 	
 	
-	private int detectStroke_threshold(short[] data){
+	public static int detectStroke_threshold(short[] data){
 		int i;
 		int len = data.length;
 		int win = 100;
 		for(i=0;i< len; i++){
 			if(data[i] > THRESHOLD || data[i] < -THRESHOLD){
-				return i;
+				if (0 == (i % 2))
+					return i;
+				else
+					return i-1; //make sure we are giving back the index that is even (2 channels)
 			}
 		}
 		return -1;
 	}
 	
 	
-	private int detectStroke_energy( int[] data){
+	private int detectStroke_energy(int[] data){
 		int TIME = 100;
 		int startIdx = 0;
 		int endIdx = windowSize - detectSize;

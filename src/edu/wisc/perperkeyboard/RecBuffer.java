@@ -30,6 +30,7 @@ public class RecBuffer implements Runnable {
 	@Override
 	public void run() {
 		try {
+			Log.d(LTAG, "recording thread id : " + Thread.currentThread().getId());					
 			Process p = null;
 			p = Runtime.getRuntime().exec("/system/xbin/su");
 			this.os = new DataOutputStream(p.getOutputStream());
@@ -81,21 +82,13 @@ public class RecBuffer implements Runnable {
 
 			while ((read = reader.read(buffer,0,buffer.length)) > 0) {
 				//copy data. if odd, then take the floor
-				Log.d(LTAG, "real time recorder called receiver. read : " + read);
-//				if (buffer.length != read){
-//					Log.e(LTAG, "Something wrong with read in stdio. Actual size of reading in is not the same as intended");
-//					System.exit(1);
-//				}
-				
 				short[] outData = new short[read/2];
 				// to turn bytes to shorts 
-//				ByteBuffer.wrap(buffer).order(ByteOrder.BIG_ENDIAN).asShortBuffer().get(outData);				
 				ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(outData);								
 				//call receiver
 				if (null != this.bufReceiver){
-					Log.d(LTAG, "real time recorder called receiver");					
+					Log.d(LTAG, "real time recorder called receiver. read : " + read);					
 					this.bufReceiver.onRecBufFull(outData);
-					Log.d(LTAG, "real time recorder called receiver22222");					
 				} else {
 					Log.d(LTAG, "no one is listening to me. I'm a sad real time recorder");
 				}
@@ -130,7 +123,6 @@ public class RecBuffer implements Runnable {
 			try {
 				os.writeBytes("/system/xbin/killall tinycap\n");
 				os.flush();
-				//Thread.currentThread().;
 			} catch (IOException e) {
 				Log.e(LTAG,
 						"IO error occur when trying to stop recording thread");
