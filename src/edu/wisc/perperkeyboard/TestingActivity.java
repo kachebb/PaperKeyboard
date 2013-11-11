@@ -32,6 +32,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private RecBuffer mBuffer ;
 	private TextView text;
 	private short[] strokeBuffer;
+	private static String chara;
 	
 	@SuppressLint("NewApi")
 	@Override
@@ -63,12 +64,13 @@ public class TestingActivity extends Activity implements RecBufListener{
 		recordingThread = new Thread(mBuffer);
 				// register myself to RecBuffer to let it know I'm listening to him
 		this.register(mBuffer);
-		recordingThread = new Thread(mBuffer);
-	//	new detectKeyStroke().execute();
+		//new detectKeyStroke().execute();
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
             // Show the Up button in the action bar.
             getActionBar().setDisplayHomeAsUpEnabled(true);
         }
+		recordingThread = new Thread(mBuffer);
+		recordingThread.start();
 	}
 
 	@Override
@@ -78,55 +80,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 		return true;
 	}
 	
-	private class detectKeyStroke extends AsyncTask<Void, Void, Void> {
-        @Override
-        protected void onPreExecute() {
-                text.setText("pre");
-        }
-
-        @Override
-        protected Void doInBackground(Void... params) {
-               // short[] audioStroke=params[1];
-                //separate left and right channel
-        	recordingThread.start();
-        	try {
-				// wait the recording thread in background ( will not block UI thread)
-				recordingThread.join();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void params) {
-        	text.setText("finish");
-        	onPreExecute();
-        }
-	}
-	
-	/**
-     * This method will be called every time the buffer of recording thread is
-     * full
-     * 
-     * @param data
-     *            : audio data recorded. For stereo data, data at odd indexes
-     *            belongs to one channel, data at even indexes belong to another
-     * @throws FileNotFoundException
-     */
 	
 	
-    @SuppressLint("NewApi")
-	@Override
-    public void onRecBufFull(short[] data) {
-            Log.d(LTAG, "I'm called at time: " + System.nanoTime()+ " thread id : " + Thread.currentThread().getId());
-            if(KeyStroke.detectStroke_threshold(data) > 0){
-            	text.setText("detected");
-            	recordingThread.interrupt();
-            }
-            
-            
-    }
     /**
 	 * use this method to register on RecBuffer to let it know who is listening
 	 * 
@@ -139,5 +94,101 @@ public class TestingActivity extends Activity implements RecBufListener{
 		r.setReceiver(this);
 	}
 	
+	/**
+     * This method will be called every time the buffer of recording thread is
+     * full
+     * 
+     * @param data
+     *            : audio data recorded. For stereo data, data at odd indexes
+     *            belongs to one channel, data at even indexes belong to another
+     * @throws FileNotFoundException
+     */
+	@SuppressLint("NewApi")
+	public void onRecBufFull(short[] data) {
+		if (!this.inStrokeMiddle) { // if not in the middle of a stroke
+			int startIdx = KeyStroke.detectStroke_threshold(data);
+			if (-1 == startIdx) { // when there is no stroke
+				return;
+			} else { // there is an stroke
+				// this whole stroke is inside current buffer
+				if (data.length - startIdx >= STROKE_CHUNKSIZE * 2) {
+					Log.d(LTAG,
+							"key stroke, data length > chuncksize, data length: "
+									+ data.length);
+					this.inStrokeMiddle = false;
+					this.strokeSamplesLeft = 0;
+					this.strokeBuffer = Arrays.copyOfRange(data, startIdx,
+							startIdx + STROKE_CHUNKSIZE * 2);
+//					synchronized (syncObj) {
+//						syncObj.notify();
+//					}
+					this.runAudioProcessing();
+				} else { // there are some samples left in the next buffer
+					this.inStrokeMiddle = true;
+					this.strokeSamplesLeft = STROKE_CHUNKSIZE * 2
+							- (data.length - startIdx);
+					this.strokeBuffer = new short[STROKE_CHUNKSIZE * 2];
+					System.arraycopy(data, startIdx, strokeBuffer, 0,
+							data.length - startIdx);
+					Log.d(LTAG,
+							"key stroke, data length < chuncksize, stroke start idx: "
+									+ startIdx + " stroke data length: "
+									+ String.valueOf(data.length - startIdx)
+									+ " stroke samples left "
+									+ this.strokeSamplesLeft);
+				}
+			}
+		} else { // if in the middle of a stroke
+			if (data.length >= strokeSamplesLeft) {
+				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
+						- 1 - strokeSamplesLeft, strokeSamplesLeft);
+				this.inStrokeMiddle = false;
+				this.strokeSamplesLeft = 0;
+				this.strokeBuffer= Arrays.copyOf(this.strokeBuffer,
+						STROKE_CHUNKSIZE * 2);
+				// get the audio features from this stroke and add it to the
+				// training set, do it in background
+				this.runAudioProcessing();				
+				Log.d(LTAG, "key stroke, data length >= samples left "
+						+ " stroke data length: " + String.valueOf(data.length)
+						+ " stroke samples left " + this.strokeSamplesLeft);
+			} else { // if the length is smaller than the needed sample left
+				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
+						- 1 - strokeSamplesLeft, data.length);
+				this.inStrokeMiddle = true;
+				this.strokeSamplesLeft = this.strokeSamplesLeft - data.length;
+				Log.d(LTAG,
+						"key stroke, data length < samples left size " + " stroke data length: "
+								+ String.valueOf(data.length)
+								+ " stroke samples left "
+								+ this.strokeSamplesLeft);
+			}
+		}
+	}
+	
+	/**
+	 * audio processing. extract features from audio. Add features to KNN.
+	 */
+	public void runAudioProcessing() {
+		// get the audio features from this stroke and add it
+		// to the training set, do it in background
+		short[] audioStroke = this.strokeBuffer;
+		// separate left and right channel
+		short[][] audioStrokeData = KeyStroke.seperateChannels(audioStroke);
+		this.strokeBuffer=null;
+		// get features
+		double[] features = SPUtil.getAudioFeatures(audioStrokeData);
+		chara = mKNN.classify(features, 1);
+		Log.d(LTAG, "detecting result"+chara);
+		
+		
+		//update UI
+		this.runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				text.setText("finish");
+			}
+		});
+	}
 
 }

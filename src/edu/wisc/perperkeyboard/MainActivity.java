@@ -192,7 +192,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		    startActivity(intent);
 		} else {
 			if (recordingThread == null) {
-				text.setText(inputstatus.toString() + "\n" + "is recording");
+				text.setText(inputstatus.toString() + "is recording"+ "trainning:"+"\n" + trainingItemName.get(curTrainingItemIdx));
 				Toast.makeText(getApplicationContext(),
 						"Please Wait Until This disappear", Toast.LENGTH_SHORT)
 						.show();
@@ -238,9 +238,11 @@ public class MainActivity extends Activity implements RecBufListener{
 		this.runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				text.setText(inputstatus.toString() + "\n" + "is recording. "
+				if(!finishedTraining)
+					text.setText(inputstatus.toString() + "\n" + "is recording. "
 				+ "next training: "
 				+ trainingItemName.get(curTrainingItemIdx));
+				else text.setText("Training finished, click to start testing");
 			}
 		});
 	}
