@@ -6,11 +6,41 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context=".Testing" >
+    tools:context=".TestingActivity" >
 
     <TextView
-        android:layout_width="wrap_content"
+        android:id="@+id/text_detectionResult"
+        android:layout_width="200dp"
         android:layout_height="wrap_content"
-        android:text="@string/hello_world" />
+        android:gravity="center"
+        android:hint="@string/detectionResult"
+        android:textSize="@dimen/Medium"
+        android:textStyle="bold" />
 
+     <EditText
+         android:id="@+id/inputChar"
+         android:layout_width="fill_parent"
+         android:layout_height="50dp"
+         android:layout_alignLeft="@+id/text_detection"
+         android:layout_below="@+id/text_detectionResult"
+         android:layout_marginLeft="22dp"
+         android:layout_marginTop="34dp"
+         android:ems="10"
+         android:hint="@string/correction"
+         android:imeOptions="actionSend"
+         android:inputType="text"
+         android:textStyle="bold" />
+
+     <TextView
+         android:id="@+id/text_detection"
+         android:layout_width="200dp"
+         android:layout_height="wrap_content"
+         android:layout_alignBaseline="@+id/text_detectionResult"
+         android:layout_alignBottom="@+id/text_detectionResult"
+         android:layout_alignParentLeft="true"
+         android:layout_marginLeft="18dp"
+         android:gravity="center"
+         android:hint="@string/detectIndication"
+         android:textSize="@dimen/Small" />
+  
 </RelativeLayout>

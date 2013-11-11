@@ -1,34 +1,29 @@
 package edu.wisc.perperkeyboard;
 
 //import edu.wisc.paperkeyboard.R;
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.io.Serializable;
 import java.nio.ShortBuffer;
-import java.nio.channels.FileChannel;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import edu.wisc.jj.SPUtil;
+import edu.wisc.jj.KNN;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity implements RecBufListener {
-
+	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
 	private static final int THRESHOLD = 200;
 	private static final int CHUNKSIZE= 2000;
@@ -163,17 +158,18 @@ public class MainActivity extends Activity implements RecBufListener {
 		@Override
 		protected void onPostExecute(Void params) {
 			//set inputs status to next and test if finished
-			int num = chunkData_threshold();
+			int num  = 0;//= chunkData_threshold();
 			//TODO add trainning code here
 			
 			soundSamples = ShortBuffer.allocate(SAMPLERATE*26*2);
 			bufferSize = 0;
 			//TODO actually here I need to clear the buffer
-			if(num != ExpectedChunkNum[inputstatus.ordinal()]){
+		//	if(num != ExpectedChunkNum[inputstatus.ordinal()]){
 				text.setText("expect " + String.valueOf(ExpectedChunkNum[inputstatus.ordinal()])+ "input but we got" + String.valueOf(num)+"\n Please input"+ inputstatus.toString() + " again:");
-				finish = false;
-			} 
-			else if(it.hasNext()){
+			//	finish = false;
+	//			inputstatus= it.next();
+		//	} 
+			if(it.hasNext()){
 				InputStatus oldstatus = inputstatus;
 				inputstatus = it.next();
 				text.setText(oldstatus.toString() +" finished"+"\n" + "Click to input"+"\n" +inputstatus.toString());
@@ -197,13 +193,24 @@ public class MainActivity extends Activity implements RecBufListener {
 		}
 		else{
 			if(finish){
-				finish();
-				System.exit(0);
+				Intent intent = new Intent(this, TestingActivity.class);
+			//   EditText editText = (EditText) findViewById(R.id.edit_message);
+			 //   String message = editText.getText().toString();
+			 //   intent.putExtra(EXTRA_MESSAGE, message);
+				KNN knn = new KNN();
+				knn.test = 10;
+				Bundle b = new Bundle();
+			//	b.putParcelable(EXTRANAME, currentListing);
+				intent.putExtra("SampleObject", knn);
+			//	i.setClass(this, SearchDetailsActivity.class);
+			//	startActivity(i);
+			    startActivity(intent);
 			}
-			new StartRecTask().execute();
+			else{
+				new StartRecTask().execute();
 			//TODO do we need to delete this after use?
-			AsycTaskRunning =true;
-			
+				AsycTaskRunning =true;
+			}
 		}
 	}
 

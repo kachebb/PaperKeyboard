@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,9 +14,11 @@ import java.util.List;
  * A kNN classification algorithm implementation.
  * 
  */
-public class KNN {
+public class KNN implements Serializable{
 	List<Item> trainingSet;
 
+	public int test;
+	
 	public KNN() {
 		this.trainingSet = new ArrayList<Item>();
 	}
