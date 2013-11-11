@@ -1,6 +1,7 @@
 package edu.wisc.perperkeyboard;
 
 import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 
 import java.io.DataOutputStream;
 
@@ -15,11 +16,10 @@ import android.util.Log;
 
 //Modified by Kaichen:
 //1. set buffer size as a parameter
-//2. 
 public class RecBuffer implements Runnable {
 	private static final String LTAG = "jjTag";
 	DataOutputStream os; // the input for current run time
-	private static final int BUFSIZE = 4096;
+	private static final int BUFSIZE = 48000 *2 * 3/10 * 2;
 	// the receiving thread
 	private RecBufListener bufReceiver; //assume only one receiver present in the system
 	
@@ -58,7 +58,7 @@ public class RecBuffer implements Runnable {
 			SystemClock.sleep(500);
 			Log.d(LTAG, "killing existing tinycap process before recording!");
 
-			BufferedInputStream reader = new BufferedInputStream(
+			DataInputStream reader = new DataInputStream(
 					p.getInputStream());
 			byte[] buffer = new byte[BUFSIZE*2];
 			int read;
@@ -79,15 +79,17 @@ public class RecBuffer implements Runnable {
 			// infinite recording
 			os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 0 -d 1 -c 2 -r 48000 -b 16\n");
 			os.flush();
-
-			while ((read = reader.read(buffer,0,buffer.length)) > 0) {
+			
+			read=buffer.length;
+			while (true) {
+				reader.readFully(buffer);
 				//copy data. if odd, then take the floor
 				short[] outData = new short[read/2];
 				// to turn bytes to shorts 
 				ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(outData);								
 				//call receiver
 				if (null != this.bufReceiver){
-					Log.d(LTAG, "real time recorder called receiver. read : " + read);					
+//					Log.d(LTAG, "real time recorder called receiver. read : " + read);					
 					this.bufReceiver.onRecBufFull(outData);
 				} else {
 					Log.d(LTAG, "no one is listening to me. I'm a sad real time recorder");
@@ -102,7 +104,6 @@ public class RecBuffer implements Runnable {
 					return;
 				}
 			}
-			Log.d(LTAG, "try to read. bytes read: " + read);								
 		} catch (Exception e) {
 			e.printStackTrace();
 			Log.d(LTAG, "error occured!!");											
