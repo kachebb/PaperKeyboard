@@ -35,9 +35,9 @@ public class MainActivity extends Activity implements RecBufListener{
 		AtoZ, NUM, LEFT, RIGHT, BOTTOM
 	}
 	// expected chunk number in each stage
-	private final int[] ExpectedChunkNum = { 26, 12, 4, 11, 7 };
+	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 6 };
 	private InputStatus inputstatus;
-
+	
 	private static TextView text;
 	private static Button mButton;
 	private Thread recordingThread;
@@ -51,7 +51,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	private int strokeSamplesLeft;
 
 	// training item
-	private ArrayList<String> trainingItemName;
+	private ArrayList<ArrayList<String>> trainingItemName;
 	private volatile int curTrainingItemIdx;
 	public int numToBeTrained;
 	public boolean finishedTraining;
@@ -74,11 +74,10 @@ public class MainActivity extends Activity implements RecBufListener{
 		// create knn
 		mKNN = new KNN();
 		// add training item names
-		trainingItemName = new ArrayList<String>();
-		for (int idx = 0; idx < 26; idx++)
-			trainingItemName.add(String.valueOf((char)('A' + idx)));
+		trainingItemName = new ArrayList<ArrayList<String>>();
+		addTrainingItem.addTrainingItems(trainingItemName);
+		
 		curTrainingItemIdx = 0;
-		this.numToBeTrained=2;
 		this.finishedTraining=false;
 		Log.d(LTAG,
 				"training item names: "
@@ -192,7 +191,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		    startActivity(intent);
 		} else {
 			if (recordingThread == null) {
-				text.setText(inputstatus.toString() + "is recording"+ "trainning:"+"\n" + trainingItemName.get(curTrainingItemIdx));
+				text.setText(inputstatus.toString() + "is recording"+ "trainning:"+"\n" + trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx));
 				Toast.makeText(getApplicationContext(),
 						"Please Wait Until This disappear", Toast.LENGTH_SHORT)
 						.show();
@@ -221,18 +220,25 @@ public class MainActivity extends Activity implements RecBufListener{
 		this.strokeBuffer=null;
 		// get features
 		double[] features = SPUtil.getAudioFeatures(audioStrokeData);
-		Log.d(LTAG, " adding features for item " + trainingItemName.get(curTrainingItemIdx));
+		Log.d(LTAG, " adding features for item " + trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx));
 		mKNN.addTrainingItem(
-				trainingItemName.get(curTrainingItemIdx),
+				trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx),
 				features);
 		curTrainingItemIdx++;
 		//stop the recording thread. Right now only support training characters (A-Z)
-		if (this.numToBeTrained == this.curTrainingItemIdx){
-			Log.d(LTAG, "throwed interrupt in runAudioProcessing");
-			this.finishedTraining=true;
-			//kill recording thread (myself)
-			recordingThread.interrupt();
-			return;
+		if (this.ExpectedInputNum[inputstatus.ordinal()] == this.curTrainingItemIdx){
+			if(it.hasNext())
+			{
+				Log.d(LTAG, "throwed interrupt in runAudioProcessing");
+				inputstatus = it.next();
+				curTrainingItemIdx  = 0;
+				return;
+			}
+			else{
+				this.finishedTraining=true;
+				//kill recording thread (myself)
+				recordingThread.interrupt();
+			}
 		} 
 		//update UI
 		this.runOnUiThread(new Runnable() {
@@ -241,9 +247,70 @@ public class MainActivity extends Activity implements RecBufListener{
 				if(!finishedTraining)
 					text.setText(inputstatus.toString() + "\n" + "is recording. "
 				+ "next training: "
-				+ trainingItemName.get(curTrainingItemIdx));
+				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx));
 				else text.setText("Training finished, click to start testing");
 			}
 		});
+	}
+}
+
+/**
+ * A class to add trainning item to the ArrayList
+ * Contains only on function
+ * @author kevin
+ *
+ */
+class addTrainingItem {
+	public static void addTrainingItems(ArrayList<ArrayList<String>> trainingItemName)
+	{
+		ArrayList<String> AtoZArray = new ArrayList<String>();
+		// add characters into training item
+		for (int idx = 0; idx < 26; idx++)
+			AtoZArray.add(String.valueOf((char)('A' + idx)));
+		trainingItemName.add(AtoZArray);
+		ArrayList<String> NumArray = new ArrayList<String>();
+		// add numbers into training item
+		for(int idx  = 0; idx < 9; idx++)
+			NumArray.add(String.valueOf((char)('1'+idx)));
+		NumArray.add(String.valueOf('0'));
+		NumArray.add(String.valueOf('-'));
+		NumArray.add(String.valueOf('='));
+		trainingItemName.add(NumArray);
+		
+		ArrayList<String> LeftArray = new ArrayList<String>();
+		// add numbers into training item
+		LeftArray.add("~");
+		LeftArray.add("Tab");
+		LeftArray.add("Caps");
+		LeftArray.add("L Shift");
+		trainingItemName.add(LeftArray);
+		
+		
+		ArrayList<String> RightArray = new ArrayList<String>();
+		// add numbers into training item
+		RightArray.add("BackSpace");
+		RightArray.add("\\");
+		RightArray.add("]");
+		RightArray.add("[");
+		RightArray.add("Enter");
+		RightArray.add("'");
+		RightArray.add(";");
+		RightArray.add("R Shift");
+		RightArray.add("/");
+		RightArray.add(".");
+		RightArray.add(",");
+		trainingItemName.add(RightArray);
+		
+		ArrayList<String> BottomArray = new ArrayList<String>();
+		// add numbers into training item
+		BottomArray.add("L Ctrl");
+		BottomArray.add("Windows");
+		BottomArray.add("L Alt");
+		BottomArray.add("Space");
+		BottomArray.add("R Alt");
+		BottomArray.add("R Ctrl");
+		trainingItemName.add(BottomArray);
+		
+		
 	}
 }

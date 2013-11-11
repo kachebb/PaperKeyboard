@@ -186,7 +186,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		this.runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				text.setText("finish");
+				text.setText(chara);
 			}
 		});
 	}
