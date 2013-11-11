@@ -30,8 +30,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
 	private static final int STROKE_CHUNKSIZE = 2000;
-	private KNN mKNN;
-
+	public static KNN mKNN;
 	private enum InputStatus {
 		AtoZ, NUM, LEFT, RIGHT, BOTTOM
 	}
@@ -64,9 +63,6 @@ public class MainActivity extends Activity implements RecBufListener{
 		text = (TextView) findViewById(R.id.text_showhint);
 		mButton = (Button) findViewById(R.id.mButton);
 		
-		mKNN = new KNN();
-		//iterator for input stage
-
 		this.inStrokeMiddle = false;
 		this.strokeSamplesLeft = 0;
 
@@ -76,14 +72,13 @@ public class MainActivity extends Activity implements RecBufListener{
 		inputstatus = it.next();
 
 		// create knn
-		this.mKNN = new KNN();
-
+		mKNN = new KNN();
 		// add training item names
 		trainingItemName = new ArrayList<String>();
 		for (int idx = 0; idx < 26; idx++)
 			trainingItemName.add(String.valueOf((char)('A' + idx)));
 		curTrainingItemIdx = 0;
-		this.numToBeTrained=26;
+		this.numToBeTrained=2;
 		this.finishedTraining=false;
 		Log.d(LTAG,
 				"training item names: "
@@ -191,9 +186,9 @@ public class MainActivity extends Activity implements RecBufListener{
 	 */
 	public void onClickButton(View view) {
 		if(this.finishedTraining){
+			//KNN knn = new KNN();
 			Intent intent = new Intent(this, TestingActivity.class);
-			mKNN.test = 10;
-			intent.putExtra("SampleObject", mKNN);
+			//intent.putExtra("SampleObject", testKNN);
 		    startActivity(intent);
 		} else {
 			if (recordingThread == null) {

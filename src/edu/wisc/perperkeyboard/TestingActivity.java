@@ -41,8 +41,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 		text = (TextView) findViewById(R.id.text_detectionResult);
 		Intent i = getIntent();
-		mKNN = (KNN)i.getSerializableExtra("SampleObject");
-		
+		//mKNN = (KNN)i.getSerializableExtra("SampleObject");
+		mKNN = MainActivity.mKNN;
 		text.setText(String.valueOf(mKNN.test));
 		EditText editText = (EditText) findViewById(R.id.inputChar);
 		editText.setOnEditorActionListener(new OnEditorActionListener() {
@@ -64,7 +64,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 				// register myself to RecBuffer to let it know I'm listening to him
 		this.register(mBuffer);
 		recordingThread = new Thread(mBuffer);
-		new detectKeyStroke().execute();
+	//	new detectKeyStroke().execute();
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
             // Show the Up button in the action bar.
             getActionBar().setDisplayHomeAsUpEnabled(true);
