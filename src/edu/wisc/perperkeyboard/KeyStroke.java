@@ -6,11 +6,11 @@ public class KeyStroke {
 	private static final int SAMPLERATE = 48000;
 	private static final int DIST = 20000;
 	//two parameter for detectStroke and chunkdata_energy
-	private int windowSize = 50;
-	private int detectSize = 10;
+	private static int windowSize = 50;
+	private static int detectSize = 10;
 	
 	
-	public short[][] seperateChannels(short[] dataAll)
+	public static short[][] seperateChannels(short[] dataAll)
 	{
 		short[][] twoChannels = new short[2][CHUNKSIZE];
 		int i;
@@ -24,7 +24,7 @@ public class KeyStroke {
 	}
 	
 	
-	private int detectStroke_threshold(short[] data){
+	public static int detectStroke_threshold(short[] data){
 		int i;
 		int len = data.length;
 		int win = 100;
@@ -37,7 +37,7 @@ public class KeyStroke {
 	}
 	
 	
-	private int detectStroke_energy( int[] data){
+	private static int detectStroke_energy( int[] data){
 		int TIME = 100;
 		int startIdx = 0;
 		int endIdx = windowSize - detectSize;

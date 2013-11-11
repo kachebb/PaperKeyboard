@@ -50,7 +50,7 @@ public class MainActivity extends Activity implements RecBufListener {
 	private int bufferSize = 0;
 	private short[][] keyStrokesR;
 	private short[][] keyStrokesL;
-	
+	private KNN mKNN;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -71,7 +71,7 @@ public class MainActivity extends Activity implements RecBufListener {
 		keyStrokesL = new short[50][CHUNKSIZE];
 		//TODO here we suppose sound samples are at most 50 key stroke, which make the app not robust....
 		
-		
+		mKNN = new KNN();
 		//iterator for input stage
 		elements = EnumSet.allOf(InputStatus.class);
 		it = elements.iterator();
@@ -194,16 +194,8 @@ public class MainActivity extends Activity implements RecBufListener {
 		else{
 			if(finish){
 				Intent intent = new Intent(this, TestingActivity.class);
-			//   EditText editText = (EditText) findViewById(R.id.edit_message);
-			 //   String message = editText.getText().toString();
-			 //   intent.putExtra(EXTRA_MESSAGE, message);
-				KNN knn = new KNN();
-				knn.test = 10;
-				Bundle b = new Bundle();
-			//	b.putParcelable(EXTRANAME, currentListing);
-				intent.putExtra("SampleObject", knn);
-			//	i.setClass(this, SearchDetailsActivity.class);
-			//	startActivity(i);
+				mKNN.test = 10;
+				intent.putExtra("SampleObject", mKNN);
 			    startActivity(intent);
 			}
 			else{

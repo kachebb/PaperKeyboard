@@ -1,10 +1,12 @@
 package edu.wisc.jj;
 
+
 import org.oc.ocvolume.dsp.featureExtraction;
+
+import ca.uol.aig.fftpack.RealDoubleFFT;
 
 import android.util.Log;
 
-import ca.uol.aig.fftpack.RealDoubleFFT;
 
 /**
  * utility class for doing signal processing: fft, MFCC ...
@@ -137,7 +139,7 @@ public class SPUtil {
 	 * get key stroke features to use as input features for KNN
 	 * @param data: 2-D data, row 0 -- left channel, row 1 -- right channel
 	 */
-	public double[] getAudioFeatures(short[][] data){
+	public static double[] getAudioFeatures(short[][] data){
 		double[] leftData=SPUtil.shortArrayToDouble(data[0]);
 		double[] rightData=SPUtil.shortArrayToDouble(data[1]);		
 		//get fft
