@@ -127,7 +127,7 @@ public class SPUtil {
 	 * @param data
 	 * @return
 	 */
-	public static double[] shortArrayToDouble(short[] data){
+	private static double[] shortArrayToDouble(short[] data){
 		double[] result= new double[data.length];
 		for (int row=0;row<data.length;row++){
 			result[row]=(double)data[row];

@@ -1,56 +1,62 @@
 package edu.wisc.perperkeyboard;
 
-//import edu.wisc.paperkeyboard.R;
 import java.io.FileNotFoundException;
-import java.io.Serializable;
-import java.nio.ShortBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Set;
 
 import edu.wisc.jj.KNN;
+import edu.wisc.jj.SPUtil;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
-import android.os.AsyncTask;
+
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
+
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class MainActivity extends Activity implements RecBufListener {
+
+@SuppressLint("NewApi")
+public class MainActivity extends Activity implements RecBufListener{
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
-	private static final int THRESHOLD = 200;
-	private static final int CHUNKSIZE= 2000;
-	private static final int SAMPLERATE = 48000;
-	private static final int DIST = 20000;
-	private enum InputStatus{AtoZ, NUM, LEFT, RIGHT, BOTTOM}
-	//expected chunk number in each stage
-	private final int[] ExpectedChunkNum = {26, 12, 4, 11, 7};
-	
+	private static final int STROKE_CHUNKSIZE = 2000;
+	private KNN mKNN;
+
+	private enum InputStatus {
+		AtoZ, NUM, LEFT, RIGHT, BOTTOM
+	}
+	// expected chunk number in each stage
+	private final int[] ExpectedChunkNum = { 26, 12, 4, 11, 7 };
 	private InputStatus inputstatus;
-	
-	private boolean finish = false;
-	private boolean AsycTaskRunning = false; 
-	
+
 	private static TextView text;
 	private static Button mButton;
 	private Thread recordingThread;
-	private static int cnt;
-	private RecBuffer mBuffer ;
+	private RecBuffer mBuffer;
 	private Set<InputStatus> elements;
 	Iterator<InputStatus> it; 
+
 	
-	private ShortBuffer soundSamples;
-	private int bufferSize = 0;
-	private short[][] keyStrokesR;
-	private short[][] keyStrokesL;
-	private KNN mKNN;
+	private short[] strokeBuffer;
+	private boolean inStrokeMiddle;
+	private int strokeSamplesLeft;
+
+	// training item
+	private ArrayList<String> trainingItemName;
+	private volatile int curTrainingItemIdx;
+	public int numToBeTrained;
+	public boolean finishedTraining;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -58,33 +64,42 @@ public class MainActivity extends Activity implements RecBufListener {
 		text = (TextView) findViewById(R.id.text_showhint);
 		mButton = (Button) findViewById(R.id.mButton);
 		
-		//Init RecBuffer and thread
-		mBuffer = new RecBuffer();
-		recordingThread = new Thread(mBuffer);
-		// register myself to RecBuffer to let it know I'm listening to him
-		this.register(mBuffer);
-		
-		soundSamples = ShortBuffer.allocate(SAMPLERATE*26*2);
-		//TODO here we suppose sound samples are at most 26s, which make the app not robust....
-		
-		keyStrokesR = new short[50][CHUNKSIZE];
-		keyStrokesL = new short[50][CHUNKSIZE];
-		//TODO here we suppose sound samples are at most 50 key stroke, which make the app not robust....
-		
 		mKNN = new KNN();
 		//iterator for input stage
+
+		this.inStrokeMiddle = false;
+		this.strokeSamplesLeft = 0;
+
+		// iterator for input stage
 		elements = EnumSet.allOf(InputStatus.class);
 		it = elements.iterator();
 		inputstatus = it.next();
+
+		// create knn
+		this.mKNN = new KNN();
+
+		// add training item names
+		trainingItemName = new ArrayList<String>();
+		for (int idx = 0; idx < 26; idx++)
+			trainingItemName.add(String.valueOf((char)('A' + idx)));
+		curTrainingItemIdx = 0;
+		this.numToBeTrained=26;
+		this.finishedTraining=false;
+		Log.d(LTAG,
+				"training item names: "
+						+ Arrays.toString(this.trainingItemName.toArray()));
+		Log.d(LTAG, "main activity thread id : "
+				+ Thread.currentThread().getId());
+
 	}
-	
+
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
-	
+
 	/**
 	 * use this method to register on RecBuffer to let it know who is listening
 	 * 
@@ -96,114 +111,142 @@ public class MainActivity extends Activity implements RecBufListener {
 		r.setReceiver(this);
 	}
 
-	
-	
-	
-	
+
 	/**
-	 * This method will be called every time the buffer of
-	 * recording thread is full
+	 * This method will be called every time the buffer of recording thread is
+	 * full. It will do audio processing to get features. And also add these features to KNN
 	 * 
-	 * @param data      : audio data recorded. For stereo data, data at odd indexes belongs to one channel, data at even indexes belong to another
+	 * @param data
+	 *            : audio data recorded. For stereo data, data at odd indexes
+	 *            belongs to one channel, data at even indexes belong to another
 	 * @throws FileNotFoundException
 	 */
-	
 	@Override
 	public void onRecBufFull(short[] data) {
-		//cnt++;
-		Log.d(LTAG, "I'm called at time: " + System.nanoTime() + "cnt number : " + cnt);
-		soundSamples.put(data);
-		bufferSize += data.length;
-	}
-	
-	
-	private class StartRecTask extends AsyncTask<Void, Void, Void> {
-		/**
-		 * this method is done before calling doInBackground. This method
-		 * belongs to the UI thread Therefore, we can update UI components on
-		 * this thread
-		 */
-		@Override
-		protected void onPreExecute() {
-			text.setText(inputstatus.toString()+ "\n"+"is recording");
-			keyStrokesR = new short[26][CHUNKSIZE];
-			keyStrokesL = new short[26][CHUNKSIZE];
-			Toast.makeText(getApplicationContext(), "Please Wait Until This disappear",
-					Toast.LENGTH_SHORT).show();
-		}
-
-		/**
-		 * this method will be done in background. No access to UI thread
-		 * components. cannot directly update anything on the phone screen
-		 * directly
-		 */
-		@Override
-		protected Void doInBackground(Void...params) {
-			recordingThread = new Thread(mBuffer);
-			recordingThread.start();
-			try {
-				// wait the recording thread in background ( will not block UI thread)
-				recordingThread.join();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+		if (!this.inStrokeMiddle) { // if not in the middle of a stroke
+			int startIdx = KeyStroke.detectStroke_threshold(data);
+			if (-1 == startIdx) { // when there is no stroke
+				return;
+			} else { // there is an stroke
+				// this whole stroke is inside current buffer
+				if (data.length - startIdx >= STROKE_CHUNKSIZE * 2) {
+					Log.d(LTAG,
+							"key stroke, data length > chuncksize, data length: "
+									+ data.length);
+					this.inStrokeMiddle = false;
+					this.strokeSamplesLeft = 0;
+					this.strokeBuffer = Arrays.copyOfRange(data, startIdx,
+							startIdx + STROKE_CHUNKSIZE * 2);
+//					synchronized (syncObj) {
+//						syncObj.notify();
+//					}
+					this.runAudioProcessing();
+				} else { // there are some samples left in the next buffer
+					this.inStrokeMiddle = true;
+					this.strokeSamplesLeft = STROKE_CHUNKSIZE * 2
+							- (data.length - startIdx);
+					this.strokeBuffer = new short[STROKE_CHUNKSIZE * 2];
+					System.arraycopy(data, startIdx, strokeBuffer, 0,
+							data.length - startIdx);
+					Log.d(LTAG,
+							"key stroke, data length < chuncksize, stroke start idx: "
+									+ startIdx + " stroke data length: "
+									+ String.valueOf(data.length - startIdx)
+									+ " stroke samples left "
+									+ this.strokeSamplesLeft);
+				}
 			}
-			return null;
-			
-		}
-
-		/**
-		 * this method is done after doInBackground. This method belongs to the
-		 * UI thread Therefore, we can update UI components on this thread
-		 */
-		@Override
-		protected void onPostExecute(Void params) {
-			//set inputs status to next and test if finished
-			int num  = 0;//= chunkData_threshold();
-			//TODO add trainning code here
-			
-			soundSamples = ShortBuffer.allocate(SAMPLERATE*26*2);
-			bufferSize = 0;
-			//TODO actually here I need to clear the buffer
-		//	if(num != ExpectedChunkNum[inputstatus.ordinal()]){
-				text.setText("expect " + String.valueOf(ExpectedChunkNum[inputstatus.ordinal()])+ "input but we got" + String.valueOf(num)+"\n Please input"+ inputstatus.toString() + " again:");
-			//	finish = false;
-	//			inputstatus= it.next();
-		//	} 
-			if(it.hasNext()){
-				InputStatus oldstatus = inputstatus;
-				inputstatus = it.next();
-				text.setText(oldstatus.toString() +" finished"+"\n" + "Click to input"+"\n" +inputstatus.toString());
-			}else{
-				text.setText("Finish Input Trainning Data");
+		} else { // if in the middle of a stroke
+			if (data.length >= strokeSamplesLeft) {
+				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
+						- 1 - strokeSamplesLeft, strokeSamplesLeft);
+				this.inStrokeMiddle = false;
+				this.strokeSamplesLeft = 0;
+				this.strokeBuffer= Arrays.copyOf(this.strokeBuffer,
+						STROKE_CHUNKSIZE * 2);
+				// get the audio features from this stroke and add it to the
+				// training set, do it in background
+				this.runAudioProcessing();				
+				Log.d(LTAG, "key stroke, data length >= samples left "
+						+ " stroke data length: " + String.valueOf(data.length)
+						+ " stroke samples left " + this.strokeSamplesLeft);
+			} else { // if the length is smaller than the needed sample left
+				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
+						- 1 - strokeSamplesLeft, data.length);
+				this.inStrokeMiddle = true;
+				this.strokeSamplesLeft = this.strokeSamplesLeft - data.length;
+				Log.d(LTAG,
+						"key stroke, data length < samples left size " + " stroke data length: "
+								+ String.valueOf(data.length)
+								+ " stroke samples left "
+								+ this.strokeSamplesLeft);
 			}
 		}
 	}
 
 	/***
 	 * this function is called when button is click
+	 * 
 	 * @param view
 	 */
-	public void onClickButton(View view){		
-		if(AsycTaskRunning){
-			AsycTaskRunning = false;
-			recordingThread.interrupt();
-			if(!it.hasNext()){
-				finish = true;
-			}
-		}
-		else{
-			if(finish){
-				Intent intent = new Intent(this, TestingActivity.class);
-				mKNN.test = 10;
-				intent.putExtra("SampleObject", mKNN);
-			    startActivity(intent);
-			}
-			else{
-				new StartRecTask().execute();
-			//TODO do we need to delete this after use?
-				AsycTaskRunning =true;
+	public void onClickButton(View view) {
+		if(this.finishedTraining){
+			Intent intent = new Intent(this, TestingActivity.class);
+			mKNN.test = 10;
+			intent.putExtra("SampleObject", mKNN);
+		    startActivity(intent);
+		} else {
+			if (recordingThread == null) {
+				text.setText(inputstatus.toString() + "\n" + "is recording");
+				Toast.makeText(getApplicationContext(),
+						"Please Wait Until This disappear", Toast.LENGTH_SHORT)
+						.show();
+				// Init RecBuffer and thread
+				mBuffer = new RecBuffer();
+				recordingThread = new Thread(mBuffer);
+				// register myself to RecBuffer to let it know I'm listening to him
+				this.register(mBuffer);
+				recordingThread.start();
+			} else {
+				recordingThread.interrupt();
 			}
 		}
 	}
 
+
+	/**
+	 * audio processing. extract features from audio. Add features to KNN.
+	 */
+	public void runAudioProcessing() {
+		// get the audio features from this stroke and add it
+		// to the training set, do it in background
+		short[] audioStroke = this.strokeBuffer;
+		// separate left and right channel
+		short[][] audioStrokeData = KeyStroke.seperateChannels(audioStroke);
+		this.strokeBuffer=null;
+		// get features
+		double[] features = SPUtil.getAudioFeatures(audioStrokeData);
+		Log.d(LTAG, " adding features for item " + trainingItemName.get(curTrainingItemIdx));
+		mKNN.addTrainingItem(
+				trainingItemName.get(curTrainingItemIdx),
+				features);
+		curTrainingItemIdx++;
+		//stop the recording thread. Right now only support training characters (A-Z)
+		if (this.numToBeTrained == this.curTrainingItemIdx){
+			Log.d(LTAG, "throwed interrupt in runAudioProcessing");
+			this.finishedTraining=true;
+			//kill recording thread (myself)
+			recordingThread.interrupt();
+			return;
+		} 
+		//update UI
+		this.runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				text.setText(inputstatus.toString() + "\n" + "is recording. "
+				+ "next training: "
+				+ trainingItemName.get(curTrainingItemIdx));
+			}
+		});
+	}
 }

@@ -1,6 +1,7 @@
 package edu.wisc.perperkeyboard;
 
 import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 
 import java.io.DataOutputStream;
 
@@ -15,11 +16,10 @@ import android.util.Log;
 
 //Modified by Kaichen:
 //1. set buffer size as a parameter
-//2. 
 public class RecBuffer implements Runnable {
 	private static final String LTAG = "jjTag";
 	DataOutputStream os; // the input for current run time
-	private static final int BUFSIZE = 4096;
+	private static final int BUFSIZE = 48000 *2 * 3/10 * 2;
 	// the receiving thread
 	private RecBufListener bufReceiver; //assume only one receiver present in the system
 	
@@ -30,6 +30,7 @@ public class RecBuffer implements Runnable {
 	@Override
 	public void run() {
 		try {
+			Log.d(LTAG, "recording thread id : " + Thread.currentThread().getId());					
 			Process p = null;
 			p = Runtime.getRuntime().exec("/system/xbin/su");
 			this.os = new DataOutputStream(p.getOutputStream());
@@ -57,7 +58,7 @@ public class RecBuffer implements Runnable {
 			SystemClock.sleep(500);
 			Log.d(LTAG, "killing existing tinycap process before recording!");
 
-			BufferedInputStream reader = new BufferedInputStream(
+			DataInputStream reader = new DataInputStream(
 					p.getInputStream());
 			byte[] buffer = new byte[BUFSIZE*2];
 			int read;
@@ -78,24 +79,18 @@ public class RecBuffer implements Runnable {
 			// infinite recording
 			os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 0 -d 1 -c 2 -r 48000 -b 16\n");
 			os.flush();
-
-			while ((read = reader.read(buffer,0,buffer.length)) > 0) {
+			
+			read=buffer.length;
+			while (true) {
+				reader.readFully(buffer);
 				//copy data. if odd, then take the floor
-				Log.d(LTAG, "real time recorder called receiver. read : " + read);
-//				if (buffer.length != read){
-//					Log.e(LTAG, "Something wrong with read in stdio. Actual size of reading in is not the same as intended");
-//					System.exit(1);
-//				}
-				
 				short[] outData = new short[read/2];
 				// to turn bytes to shorts 
-//				ByteBuffer.wrap(buffer).order(ByteOrder.BIG_ENDIAN).asShortBuffer().get(outData);				
 				ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(outData);								
 				//call receiver
 				if (null != this.bufReceiver){
-					Log.d(LTAG, "real time recorder called receiver");					
+//					Log.d(LTAG, "real time recorder called receiver. read : " + read);					
 					this.bufReceiver.onRecBufFull(outData);
-					Log.d(LTAG, "real time recorder called receiver22222");					
 				} else {
 					Log.d(LTAG, "no one is listening to me. I'm a sad real time recorder");
 				}
@@ -109,7 +104,6 @@ public class RecBuffer implements Runnable {
 					return;
 				}
 			}
-			Log.d(LTAG, "try to read. bytes read: " + read);								
 		} catch (Exception e) {
 			e.printStackTrace();
 			Log.d(LTAG, "error occured!!");											
@@ -121,7 +115,7 @@ public class RecBuffer implements Runnable {
 	 * kill tinycap.
 	 * @return
 	 */
-	private boolean stopRecording() {
+	public boolean stopRecording() {
 		if (null == this.os) {
 			Log.d(LTAG,
 					"try to stop recording thread. But the recording thread is not present.");
@@ -130,7 +124,6 @@ public class RecBuffer implements Runnable {
 			try {
 				os.writeBytes("/system/xbin/killall tinycap\n");
 				os.flush();
-				//Thread.currentThread().;
 			} catch (IOException e) {
 				Log.e(LTAG,
 						"IO error occur when trying to stop recording thread");
