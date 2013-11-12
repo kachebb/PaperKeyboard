@@ -3,8 +3,14 @@ Nov. 9:
 
 Nov. 11:
 Basic function is established.
-Require 5 inputs of each key in training stage.
+Require 5 inputs of each key in training stage.
 
+Current code is to detecting key AtoZ
+if you want to train and test all keys, 
+remove comment on line 36 in MainActivity.java 
+AtoZ//, NUM, LEFT, RIGtextHT, BOTTOM
+and change the private final int[] ExpectedInputNum = { 4, 12, 4, 11, 6 }; 
+to private final int[] ExpectedInputNum = { 26, 12, 4, 11, 6 };
 
 Todo:
 1. Add clear/restart button (2 buttons) on training activity to clear training for current key/restart training, in case input error in training 
