@@ -5,7 +5,7 @@ Nov. 11:
 Basic function is established.
 Require 5 inputs of each key in training stage.
 
-Current code is to detecting key AtoZ
+Current code is to detecting key A B C D
 if you want to train and test all keys, 
 remove comment on line 36 in MainActivity.java 
 AtoZ//, NUM, LEFT, RIGtextHT, BOTTOM
