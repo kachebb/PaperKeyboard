@@ -1,2 +1,48 @@
 Nov. 9:
 1.Touch screen can sometimes be regarded as a keystroke by this program.
+
+Nov. 11:
+Basic function is established.
+Require 5 inputs of each key in training stage.
+
+
+Todo:
+1. Add clear/restart button (2 buttons) on training activity to clear training for current key/restart training, in case input error in training 
+	stage
+2. Enhance keystroke detection algorithm
+	a. Move energy window
+	b. Compare number of sample points that are greater than threshold in two window
+	c. Threshold + Energy.... If find a sample point that is greater than threshold, then calculate 
+		energy of next several samples and energy of previous several samples. Compare the two energy
+3. Online Training--Train the FFN when testing
+	Every input in testing, if not corrected by user, use this input to train the KNN
+	Replacement Policy:FIFO
+4. Self Correction
+	pseudo code:
+	clickTimes = 0;
+	onClickBackSpace(){
+		clickTimes ++;
+	}	
+	//when get new key input
+	if(clickTimes == 1)
+	{
+		newkey = KNN.nearest(current input feature);
+		if( newkey != previousKey)
+		{	
+			show newkey; // we think it is users input error
+			clickTimes = 0; //clear the click time
+		}else{
+			newkey = KNN.second_nearest(current input feature);
+			KNN.removeNearestPoint();
+			show newkey;
+		}
+	}else if(clickTimes == 2) //
+	{
+		let the user input the correct corresponding key through screen;
+		clickTimes = 0;
+	}
+		
+		
+		
+		
+		

@@ -30,14 +30,14 @@ public class MainActivity extends Activity implements RecBufListener{
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
 	private static final int STROKE_CHUNKSIZE = 2000;
+	private static final int TRAINNUM = 5; //how many keystroke we need to get for each key when training 
 	public static KNN mKNN;
 	private enum InputStatus {
-		AtoZ, NUM, LEFT, RIGHT, BOTTOM
+		AtoZ//, NUM, LEFT, RIGtextHT, BOTTOM
 	}
 	// expected chunk number in each stage
-	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 6 };
+	private final int[] ExpectedInputNum = { 4, 12, 4, 11, 6 };
 	private InputStatus inputstatus;
-	
 	private static TextView text;
 	private static Button mButton;
 	private Thread recordingThread;
@@ -55,6 +55,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	private volatile int curTrainingItemIdx;
 	public int numToBeTrained;
 	public boolean finishedTraining;
+	private int TrainedNum = 0;  // for each key, how many key stroke we have collected
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +79,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		addTrainingItem.addTrainingItems(trainingItemName);
 		
 		curTrainingItemIdx = 0;
+		TrainedNum = 0; 
 		this.finishedTraining=false;
 		Log.d(LTAG,
 				"training item names: "
@@ -131,9 +133,6 @@ public class MainActivity extends Activity implements RecBufListener{
 					this.strokeSamplesLeft = 0;
 					this.strokeBuffer = Arrays.copyOfRange(data, startIdx,
 							startIdx + STROKE_CHUNKSIZE * 2);
-//					synchronized (syncObj) {
-//						syncObj.notify();
-//					}
 					this.runAudioProcessing();
 				} else { // there are some samples left in the next buffer
 					this.inStrokeMiddle = true;
@@ -188,6 +187,7 @@ public class MainActivity extends Activity implements RecBufListener{
 			//KNN knn = new KNN();
 			Intent intent = new Intent(this, TestingActivity.class);
 			//intent.putExtra("SampleObject", testKNN);
+			mKNN.test = 10;
 		    startActivity(intent);
 		} else {
 			if (recordingThread == null) {
@@ -224,7 +224,12 @@ public class MainActivity extends Activity implements RecBufListener{
 		mKNN.addTrainingItem(
 				trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx),
 				features);
-		curTrainingItemIdx++;
+		TrainedNum ++;
+		if(TrainedNum == TRAINNUM)
+		{
+			curTrainingItemIdx++;
+			TrainedNum = 0;
+		}
 		//stop the recording thread. Right now only support training characters (A-Z)
 		if (this.ExpectedInputNum[inputstatus.ordinal()] == this.curTrainingItemIdx){
 			if(it.hasNext())
@@ -245,10 +250,15 @@ public class MainActivity extends Activity implements RecBufListener{
 			@Override
 			public void run() {
 				if(!finishedTraining)
-					text.setText(inputstatus.toString() + "\n" + "is recording. "
-				+ "next training: "
-				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx));
-				else text.setText("Training finished, click to start testing");
+					text.setText(inputstatus.toString()  + "is recording. " + "\n"
+				+ "current training: "
+				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
+				+ String.valueOf(TRAINNUM - TrainedNum) + "left");
+				else {
+					text.setText("Training finished, click to start testing");
+					mButton.setText("Click to Test");
+				}
+				
 			}
 		});
 	}
@@ -258,7 +268,6 @@ public class MainActivity extends Activity implements RecBufListener{
  * A class to add trainning item to the ArrayList
  * Contains only on function
  * @author kevin
- *
  */
 class addTrainingItem {
 	public static void addTrainingItems(ArrayList<ArrayList<String>> trainingItemName)

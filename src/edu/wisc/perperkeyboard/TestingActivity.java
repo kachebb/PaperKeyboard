@@ -8,12 +8,12 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
+import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
@@ -32,7 +32,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private RecBuffer mBuffer ;
 	private TextView text;
 	private short[] strokeBuffer;
-	private static String chara;
+	private static String charas = "";
+	private TextView texthint;
 	
 	@SuppressLint("NewApi")
 	@Override
@@ -41,6 +42,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		setContentView(R.layout.activity_testing);
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 		text = (TextView) findViewById(R.id.text_detectionResult);
+		texthint = (TextView) findViewById(R.id.text_detection);
 		Intent i = getIntent();
 		//mKNN = (KNN)i.getSerializableExtra("SampleObject");
 		mKNN = MainActivity.mKNN;
@@ -178,17 +180,28 @@ public class TestingActivity extends Activity implements RecBufListener{
 		this.strokeBuffer=null;
 		// get features
 		double[] features = SPUtil.getAudioFeatures(audioStrokeData);
-		chara = mKNN.classify(features, 1);
-		Log.d(LTAG, "detecting result"+chara);
+		charas += mKNN.classify(features, 1);
+		Log.d(LTAG, "detecting result"+charas);
 		
 		
 		//update UI
 		this.runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				text.setText(chara);
+				text.setText(charas);
 			}
 		});
+	}
+	/***
+	 * This fuction is called when user click backspace button on screen
+	 * It remove one character from the displayed characters 
+	 */
+	
+	public void onClickButtonBackSpace(View view)
+	{
+		int len = charas.length();
+		charas = charas.substring(0, len-1);
+		text.setText(charas);
 	}
 
 }

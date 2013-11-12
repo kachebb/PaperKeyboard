@@ -10,5 +10,7 @@
     <string name="detectionResult">detection result</string>
     <string name="correction">click to input the correct character here</string>
 	<string name = "detectIndication">Key detection result</string>
+	<string name = "backSpace">Backspace</string>
+	
 
 </resources>
