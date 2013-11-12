@@ -6,7 +6,7 @@
 
     <uses-sdk
         android:minSdkVersion="8"
-        android:targetSdkVersion="18" />
+        android:targetSdkVersion="17" />
 
     <application
         android:allowBackup="true"
@@ -24,19 +24,9 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="edu.wisc.perperkeyboard.Testing"
-            android:label="@string/title_activity_testing"
-            android:parentActivityName="edu.wisc.perperkeyboard.MainActivity"
-            android:screenOrientation="landscape"
-             android:windowSoftInputMode="adjustResize"  >
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="edu.wisc.perperkeyboard.MainActivity" />
-            
-        </activity>
-        <activity
             android:name="edu.wisc.perperkeyboard.TestingActivity"
-            android:label="@string/title_activity_testing" >
+            android:screenOrientation="landscape"
+            android:label="@string/title_activity_testing">
         </activity>
     </application>
 

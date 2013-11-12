@@ -95,6 +95,18 @@ public class MainActivity extends Activity implements RecBufListener{
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
+	
+	
+	@Override
+	public void onStop(){
+		Log.d(LTAG,"training activity stopped");
+		if (this.recordingThread!=null){
+			//make sure the recording thread is stopped
+			recordingThread.interrupt();
+			recordingThread=null;
+		}
+		super.onStop();
+	}
 
 	/**
 	 * use this method to register on RecBuffer to let it know who is listening
@@ -126,9 +138,9 @@ public class MainActivity extends Activity implements RecBufListener{
 			} else { // there is an stroke
 				// this whole stroke is inside current buffer
 				if (data.length - startIdx >= STROKE_CHUNKSIZE * 2) {
-					Log.d(LTAG,
-							"key stroke, data length > chuncksize, data length: "
-									+ data.length);
+//					Log.d(LTAG,
+//							"key stroke, data length > chuncksize, data length: "
+//									+ data.length);
 					this.inStrokeMiddle = false;
 					this.strokeSamplesLeft = 0;
 					this.strokeBuffer = Arrays.copyOfRange(data, startIdx,
@@ -141,12 +153,12 @@ public class MainActivity extends Activity implements RecBufListener{
 					this.strokeBuffer = new short[STROKE_CHUNKSIZE * 2];
 					System.arraycopy(data, startIdx, strokeBuffer, 0,
 							data.length - startIdx);
-					Log.d(LTAG,
-							"key stroke, data length < chuncksize, stroke start idx: "
-									+ startIdx + " stroke data length: "
-									+ String.valueOf(data.length - startIdx)
-									+ " stroke samples left "
-									+ this.strokeSamplesLeft);
+//					Log.d(LTAG,
+//							"key stroke, data length < chuncksize, stroke start idx: "
+//									+ startIdx + " stroke data length: "
+//									+ String.valueOf(data.length - startIdx)
+//									+ " stroke samples left "
+//									+ this.strokeSamplesLeft);
 				}
 			}
 		} else { // if in the middle of a stroke
@@ -160,19 +172,19 @@ public class MainActivity extends Activity implements RecBufListener{
 				// get the audio features from this stroke and add it to the
 				// training set, do it in background
 				this.runAudioProcessing();				
-				Log.d(LTAG, "key stroke, data length >= samples left "
-						+ " stroke data length: " + String.valueOf(data.length)
-						+ " stroke samples left " + this.strokeSamplesLeft);
+//				Log.d(LTAG, "key stroke, data length >= samples left "
+//						+ " stroke data length: " + String.valueOf(data.length)
+//						+ " stroke samples left " + this.strokeSamplesLeft);
 			} else { // if the length is smaller than the needed sample left
 				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
 						- 1 - strokeSamplesLeft, data.length);
 				this.inStrokeMiddle = true;
 				this.strokeSamplesLeft = this.strokeSamplesLeft - data.length;
-				Log.d(LTAG,
-						"key stroke, data length < samples left size " + " stroke data length: "
-								+ String.valueOf(data.length)
-								+ " stroke samples left "
-								+ this.strokeSamplesLeft);
+//				Log.d(LTAG,
+//						"key stroke, data length < samples left size " + " stroke data length: "
+//								+ String.valueOf(data.length)
+//								+ " stroke samples left "
+//								+ this.strokeSamplesLeft);
 			}
 		}
 	}
@@ -195,6 +207,7 @@ public class MainActivity extends Activity implements RecBufListener{
 				Toast.makeText(getApplicationContext(),
 						"Please Wait Until This disappear", Toast.LENGTH_SHORT)
 						.show();
+				Log.d(LTAG, "onClickButton starting another recording thread");
 				// Init RecBuffer and thread
 				mBuffer = new RecBuffer();
 				recordingThread = new Thread(mBuffer);
@@ -203,6 +216,7 @@ public class MainActivity extends Activity implements RecBufListener{
 				recordingThread.start();
 			} else {
 				recordingThread.interrupt();
+				recordingThread = null;
 			}
 		}
 	}

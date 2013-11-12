@@ -43,7 +43,6 @@
          android:imeOptions="actionSend"
          android:inputType="text"
          android:textStyle="bold" >
-         <requestFocus />
      </EditText>
      
      

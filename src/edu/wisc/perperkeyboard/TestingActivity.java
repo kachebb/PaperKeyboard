@@ -18,6 +18,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.TextView.OnEditorActionListener;
 import edu.wisc.jj.KNN;
 import edu.wisc.jj.SPUtil;
@@ -32,7 +33,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private RecBuffer mBuffer ;
 	private TextView text;
 	private short[] strokeBuffer;
-	private static String charas = "";
+	private volatile static String charas = "";
 	private TextView texthint;
 	
 	@SuppressLint("NewApi")
@@ -61,18 +62,21 @@ public class TestingActivity extends Activity implements RecBufListener{
 		        return handled;
 		    }
 		});
+		editText.clearFocus();
+		
 		//Init RecBuffer and thread
 		mBuffer = new RecBuffer();
 		recordingThread = new Thread(mBuffer);
-				// register myself to RecBuffer to let it know I'm listening to him
+
+		Log.d(LTAG, "on create called once for main acitivity");
 		this.register(mBuffer);
-		//new detectKeyStroke().execute();
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-            // Show the Up button in the action bar.
-            getActionBar().setDisplayHomeAsUpEnabled(true);
-        }
+//		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+//            // Show the Up button in the action bar.
+//            getActionBar().setDisplayHomeAsUpEnabled(true);
+//        }
 		recordingThread = new Thread(mBuffer);
 		recordingThread.start();
+		text.requestFocus();		
 	}
 
 	@Override
@@ -121,9 +125,6 @@ public class TestingActivity extends Activity implements RecBufListener{
 					this.strokeSamplesLeft = 0;
 					this.strokeBuffer = Arrays.copyOfRange(data, startIdx,
 							startIdx + STROKE_CHUNKSIZE * 2);
-//					synchronized (syncObj) {
-//						syncObj.notify();
-//					}
 					this.runAudioProcessing();
 				} else { // there are some samples left in the next buffer
 					this.inStrokeMiddle = true;
@@ -181,13 +182,12 @@ public class TestingActivity extends Activity implements RecBufListener{
 		// get features
 		double[] features = SPUtil.getAudioFeatures(audioStrokeData);
 		charas += mKNN.classify(features, 1);
-		Log.d(LTAG, "detecting result"+charas);
-		
-		
+		Log.d(LTAG, "detecting result "+charas);
 		//update UI
 		this.runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
+				Toast.makeText(getApplicationContext(), "detection result "+charas, Toast.LENGTH_SHORT).show();				
 				text.setText(charas);
 			}
 		});
@@ -203,5 +203,4 @@ public class TestingActivity extends Activity implements RecBufListener{
 		charas = charas.substring(0, len-1);
 		text.setText(charas);
 	}
-
 }
