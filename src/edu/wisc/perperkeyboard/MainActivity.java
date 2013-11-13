@@ -8,6 +8,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import edu.wisc.jj.BasicKNN;
 import edu.wisc.jj.KNN;
 import edu.wisc.jj.SPUtil;
 
@@ -73,7 +74,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		inputstatus = it.next();
 
 		// create knn
-		mKNN = new KNN();
+		mKNN = new BasicKNN();
 		// add training item names
 		trainingItemName = new ArrayList<ArrayList<String>>();
 		addTrainingItem.addTrainingItems(trainingItemName);
@@ -199,7 +200,7 @@ public class MainActivity extends Activity implements RecBufListener{
 			//KNN knn = new KNN();
 			Intent intent = new Intent(this, TestingActivity.class);
 			//intent.putExtra("SampleObject", testKNN);
-			mKNN.test = 10;
+//			mKNN.test = 10;
 		    startActivity(intent);
 		} else {
 			if (recordingThread == null) {
