@@ -106,7 +106,7 @@ public class RecBuffer implements Runnable {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			Log.d(LTAG, "error occured!!");											
+			Log.d(LTAG, "error occured!!" + e.getMessage());											
 			System.exit(1);
 		}
 	}

@@ -312,11 +312,6 @@ public class MainActivity extends Activity implements RecBufListener{
 				Log.d(LTAG, "throwed interrupt in runAudioProcessing");
 				inputstatus = it.next();
 				curTrainingItemIdx  = 0;
-				//update UI
-				text.setText(inputstatus.toString()  + "is recording. " + "\n"
-						+ "current training: "
-						+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
-						+ String.valueOf(TRAINNUM - TrainedNum) + "left");
 				
 				return;
 			}
