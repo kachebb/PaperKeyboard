@@ -49,7 +49,9 @@ Todo:
 	}
 		
 Nov 13:
-Problem: click backspace on screen can possibly be regarded as keystroke 
+Problems: 
+1.click backspace on screen can possibly be regarded as keystroke 
+2.
 
 1. Implement online correction policy,
 See function:	
@@ -58,13 +60,25 @@ and OnclickButtonBackSpace
 
 2. Halt the key recognition when user input
 
-3. Modify BasicKNN.java
+3. Add clear and restart button on training screen
+
+4. Add online training:
+the policy is simple:
+if(input is after a backSpace)
+	we don't train this key;
+else use our prediction to train that key;
+
+if(preinput = recognize(user input) 
+	then user click backSpace 
+		then recognize(new input) == preinput
+			then user clickbackSpace)  
+	remove the latest training;
+
+Also I modified a little in BasicKNN.java to implement the policies 
+5. Modify BasicKNN.java
 a.Modified the key training function in KNN
 Add a replacement policy:
 when training set is full,
 remove the most far node from new node, and insert new node
 b. add 1 value: trainingSize---indicate the training set size for each key
 c. add 3 functons: setTrainingSize(int num), getTrainingSize and  removeLatestItem()
-
-
-4. Add clear and restart button on training screen

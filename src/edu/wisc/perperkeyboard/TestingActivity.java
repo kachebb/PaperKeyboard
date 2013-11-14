@@ -50,7 +50,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		text = (TextView) findViewById(R.id.text_detectionResult);
 		texthint = (TextView) findViewById(R.id.text_detection);
 		halt = false;
-		Intent i = getIntent();
+		//Intent i = getIntent();
 		//mKNN = (KNN)i.getSerializableExtra("SampleObject");
 		mKNN = MainActivity.mKNN;
 		text.setText("Training Size:"+String.valueOf(mKNN.getTrainingSize()));
@@ -219,26 +219,30 @@ public class TestingActivity extends Activity implements RecBufListener{
 		String newKey;
 		if(clickTimes != 1){ //only one way to make click Time > 1, that is user click backSpace continuously
 			newKey = mKNN.classify(features, 1);
+			mKNN.addTrainingItem(newKey, features);//online training
 			charas += newKey;
 			Log.d(LTAG, "clockTimes:0, charas: "+charas);
 			clickTimes = 0;
 		}
 		else{
 			newKey = mKNN.classify(features, 1);
-			if(newKey != previousKey)
+			if(newKey != previousKey) // we think this is user's input error
 			{
+				Item currentItem = new Item(features);
+				Item[] closest = mKNN.getClosestList();
+				//if distance is greater than a threshold, we choose the next closest 
+				if(mKNN.findDistance(closest[0], currentItem) > mKNN.DISTTHRE)
+				{
+					clickTimes = 0;
+					Log.d(LTAG, "clockTime:1 different form previous, charas: "+charas);
+				}
 				charas += newKey;
-				Log.d(LTAG, "clockTime:1 different form previous, charas: "+charas);
-				clickTimes = 0;
-			}else{
+			}else{  //Newkey equals previous key, it might be our error, 
+				//if dist(feature, newKey) > threshold, we choose next closest key as output
 				//get the nearest 2 nodes
 				mKNN.classify(features, 2);
 				Item[] closest = mKNN.getClosestList();
-				Item currentItem = new Item(features);
-				//if distance is greater than a threshold, we choose the next closest 
-				if(mKNN.findDistance(closest[0], currentItem) > mKNN.DISTTHRE)
-					newKey = closest[1].category;
-				else newKey = closest[0].category;
+				newKey = closest[1].category;
 				charas += newKey;
 				Log.d(LTAG, "clockTime:1, same as previous, charas: "+charas);
 				clickOnceAndSame = true;//pass this value to deal with the condition that user want to click several times of backspace
@@ -266,6 +270,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		if(clickTimes == 2 && clickOnceAndSame)
 		{
 			this.halt = true;
+			mKNN.removeLatestInput(); //we did wrong training when testing, remove it
 		    ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE))
 		        .showSoftInput(editText, InputMethodManager.SHOW_FORCED);
 		}

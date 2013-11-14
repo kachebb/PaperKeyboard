@@ -21,7 +21,7 @@ import android.annotation.SuppressLint;
 public class BasicKNN implements KNN{
 	List<Item> trainingSet;
 	Item[] closestList;
-	public final int DISTTHRE = 2000;
+	public final int DISTTHRE = 1;
 	private int trainingSize = 5;
 	
 	public BasicKNN() {
