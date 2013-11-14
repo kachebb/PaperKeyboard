@@ -25,7 +25,6 @@
       	 android:layout_above= "@+id/inputChar"
       	 android:layout_marginBottom="10dp"
       	 android:layout_marginTop="10dp"
-         android:gravity="center"
          android:hint="@string/detectionResult"
          android:textSize="25sp"
          android:textStyle="bold" />

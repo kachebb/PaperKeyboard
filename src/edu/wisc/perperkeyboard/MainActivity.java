@@ -28,60 +28,68 @@ import android.widget.Toast;
 
 @SuppressLint("NewApi")
 public class MainActivity extends Activity implements RecBufListener{
+	/**********constant values****************/
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
 	private static final int STROKE_CHUNKSIZE = 2000;
-	private static final int TRAINNUM = 5; //how many keystroke we need to get for each key when training 
-	public static KNN mKNN;
+	private static int TRAINNUM = 5; //how many keystroke we need to get for each key when training 
+	public static BasicKNN mKNN;
 	private enum InputStatus {
-		AtoZ//, NUM, LEFT, RIGtextHT, BOTTOM
+		AtoZ, NUM//, LEFT, RIGtextHT, BOTTOM
 	}
+	/****to track input stage*************/
 	// expected chunk number in each stage
-	private final int[] ExpectedInputNum = { 4, 12, 4, 11, 6 };
+//	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 6 };
+	private final int[] ExpectedInputNum = { 3, 2, 4, 11, 6 };
 	private InputStatus inputstatus;
+	private Set<InputStatus> elements;
+	Iterator<InputStatus> it; 
+	
+	/*************UI********************/
 	private static TextView text;
 	private static Button mButton;
 	private Thread recordingThread;
 	private RecBuffer mBuffer;
-	private Set<InputStatus> elements;
-	Iterator<InputStatus> it; 
 
-	
+	/************audio collection***********/
 	private short[] strokeBuffer;
 	private boolean inStrokeMiddle;
 	private int strokeSamplesLeft;
 
-	// training item
+	/***********training*****************/
 	private ArrayList<ArrayList<String>> trainingItemName;
 	private volatile int curTrainingItemIdx;
-	public int numToBeTrained;
+	//public int numToBeTrained;
 	public boolean finishedTraining;
 	private int TrainedNum = 0;  // for each key, how many key stroke we have collected
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		/**********init UI****************/
 		setContentView(R.layout.activity_main);
 		text = (TextView) findViewById(R.id.text_showhint);
 		mButton = (Button) findViewById(R.id.mButton);
 		
+		/******init values*************/
 		this.inStrokeMiddle = false;
 		this.strokeSamplesLeft = 0;
-
+		curTrainingItemIdx = 0;
+		TrainedNum = 0; 
+		this.finishedTraining=false;		
 		// iterator for input stage
 		elements = EnumSet.allOf(InputStatus.class);
 		it = elements.iterator();
 		inputstatus = it.next();
-
-		// create knn
+		this.TRAINNUM = 3;
+		
+		/********* create knn*************/
 		mKNN = new BasicKNN();
+		mKNN.setTrainingSize(5);
 		// add training item names
 		trainingItemName = new ArrayList<ArrayList<String>>();
 		addTrainingItem.addTrainingItems(trainingItemName);
 		
-		curTrainingItemIdx = 0;
-		TrainedNum = 0; 
-		this.finishedTraining=false;
 		Log.d(LTAG,
 				"training item names: "
 						+ Arrays.toString(this.trainingItemName.toArray()));
@@ -221,7 +229,58 @@ public class MainActivity extends Activity implements RecBufListener{
 			}
 		}
 	}
-
+	
+	public void onClickClear(View view){
+		//remove latest input
+		if(curTrainingItemIdx == 0 && TrainedNum == 0){ //means we just got to new input stage
+			//find previous stage
+			Set<InputStatus> tempelements =  EnumSet.allOf(InputStatus.class);;
+			Iterator<InputStatus> newit = elements.iterator();
+			Iterator<InputStatus> previousIt = null;
+			while(newit.hasNext()){
+				if (newit.hashCode() == it.hashCode() && previousIt != null)
+				{
+					it = previousIt;
+					curTrainingItemIdx = ExpectedInputNum[inputstatus.ordinal()]-1;
+					TrainedNum = TRAINNUM-1;
+					mKNN.removeLatestInput();
+					break;
+				}
+				newit.next();
+			}
+		}else if(TrainedNum == 0){ // means we just got to new input key, but not the first key of input stage
+			curTrainingItemIdx --;
+			TrainedNum = TRAINNUM -1;
+			mKNN.removeLatestInput();
+		}else{
+			TrainedNum --;
+			mKNN.removeLatestInput();
+		}
+		//show new info
+		text.setText(inputstatus.toString()  + "is recording. " + "\n"
+				+ "current training: "
+				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
+				+ String.valueOf(TRAINNUM - TrainedNum) + "left");
+	
+	}
+	
+	public void onClickRestart(View view){
+		//clear KNN
+		mKNN.clear();
+		//clear iterator and inputstatus
+		elements = EnumSet.allOf(InputStatus.class);
+		it = elements.iterator();
+		inputstatus= it.next();
+		//clear trained number
+		TrainedNum = 0;
+		curTrainingItemIdx = 0;
+		//show new info
+		text.setText(inputstatus.toString()  + "is recording. " + "\n"
+				+ "current training: "
+				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
+				+ String.valueOf(TRAINNUM - TrainedNum) + "left");
+		
+	}
 
 	/**
 	 * audio processing. extract features from audio. Add features to KNN.
@@ -245,7 +304,7 @@ public class MainActivity extends Activity implements RecBufListener{
 			curTrainingItemIdx++;
 			TrainedNum = 0;
 		}
-		//stop the recording thread. Right now only support training characters (A-Z)
+		
 		if (this.ExpectedInputNum[inputstatus.ordinal()] == this.curTrainingItemIdx){
 			if(it.hasNext())
 			{

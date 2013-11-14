@@ -8,7 +8,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -18,24 +17,30 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.TextView.OnEditorActionListener;
-import edu.wisc.jj.KNN;
+import android.widget.Toast;
+import edu.wisc.jj.BasicKNN;
+import edu.wisc.jj.Item;
 import edu.wisc.jj.SPUtil;
 
 public class TestingActivity extends Activity implements RecBufListener{
 	private static final String LTAG = "testing activity debug";	
 	private static final int STROKE_CHUNKSIZE = 2000;
-	private KNN mKNN;
+	private BasicKNN mKNN;
 	private boolean inStrokeMiddle;
 	private int strokeSamplesLeft;
 	private Thread recordingThread;
 	private RecBuffer mBuffer ;
 	private TextView text;
+	private EditText editText;
 	private short[] strokeBuffer;
 	private volatile static String charas = "";
 	private TextView texthint;
-	
+	private int clickTimes = 0;
+	private String previousKey = "";
+	private boolean halt = false;
+	private boolean clickOnceAndSame = false;
+	private double[] previousFeature;
 	@SuppressLint("NewApi")
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -44,17 +49,26 @@ public class TestingActivity extends Activity implements RecBufListener{
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 		text = (TextView) findViewById(R.id.text_detectionResult);
 		texthint = (TextView) findViewById(R.id.text_detection);
+		halt = false;
 		Intent i = getIntent();
 		//mKNN = (KNN)i.getSerializableExtra("SampleObject");
 		mKNN = MainActivity.mKNN;
-		text.setText(String.valueOf(mKNN.test));
-		EditText editText = (EditText) findViewById(R.id.inputChar);
+		text.setText("Training Size:"+String.valueOf(mKNN.getTrainingSize()));
+		editText = (EditText) findViewById(R.id.inputChar);
 		editText.setOnEditorActionListener(new OnEditorActionListener() {
 		    @Override
 		    public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
 		        boolean handled = false;
+		     
 		        if (actionId == EditorInfo.IME_ACTION_SEND) {
-		            text.setText(v.getText());
+		           // text.setText(v.getText());
+		        	charas += v.getText().toString();
+		        	//if training set is full, we need to remove the most far point
+		        	mKNN.addTrainingItem(v.getText().toString(), previousFeature);
+		        	text.setText(charas);
+		        	clickTimes = 0;
+		        	halt = false;
+		        	clickOnceAndSame = false;
 		            handled = true;
 		        }
 		        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -67,13 +81,9 @@ public class TestingActivity extends Activity implements RecBufListener{
 		//Init RecBuffer and thread
 		mBuffer = new RecBuffer();
 		recordingThread = new Thread(mBuffer);
-
+		clickTimes = 0;
 		Log.d(LTAG, "on create called once for main acitivity");
 		this.register(mBuffer);
-//		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-//            // Show the Up button in the action bar.
-//            getActionBar().setDisplayHomeAsUpEnabled(true);
-//        }
 		recordingThread = new Thread(mBuffer);
 		recordingThread.start();
 		text.requestFocus();		
@@ -118,9 +128,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 			} else { // there is an stroke
 				// this whole stroke is inside current buffer
 				if (data.length - startIdx >= STROKE_CHUNKSIZE * 2) {
-					Log.d(LTAG,
-							"key stroke, data length > chuncksize, data length: "
-									+ data.length);
+			//		Log.d(LTAG,	"key stroke, data length > chuncksize, data length: "									+ data.length);
 					this.inStrokeMiddle = false;
 					this.strokeSamplesLeft = 0;
 					this.strokeBuffer = Arrays.copyOfRange(data, startIdx,
@@ -181,20 +189,71 @@ public class TestingActivity extends Activity implements RecBufListener{
 		this.strokeBuffer=null;
 		// get features
 		double[] features = SPUtil.getAudioFeatures(audioStrokeData);
-		charas += mKNN.classify(features, 1);
-		Log.d(LTAG, "detecting result "+charas);
+		// if not halt by user input by screen keyboard, continue catching and showing data
+		if(!halt)
+			this.dealwithBackSpace(features);
+		else Log.d(LTAG, "screen halts audioprocessing, we do nothing");
 		//update UI
 		this.runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				Toast.makeText(getApplicationContext(), "detection result "+charas, Toast.LENGTH_SHORT).show();				
-				text.setText(charas);
+				//if(clickTimes < 2){
+					//Toast.makeText(getApplicationContext(), "detection result "+charas, Toast.LENGTH_SHORT).show();				
+					texthint.setText("click Times:" + String.valueOf(clickTimes));
+					text.setText(charas);
+				//}else
+				//{
+				//	texthint.setText("click the input box to input the correct char");
+				//}
 			}
 		});
 	}
+	/**
+	 * This is just a function that is to make runAudioProcessing function more clear
+	 * It decides what to do according to backspace click time
+	 * 
+	 * @param features: features that are extracted by runAudiaoProcessing
+	 */ 
+	
+	private void dealwithBackSpace(double[] features){
+		String newKey;
+		if(clickTimes != 1){ //only one way to make click Time > 1, that is user click backSpace continuously
+			newKey = mKNN.classify(features, 1);
+			charas += newKey;
+			Log.d(LTAG, "clockTimes:0, charas: "+charas);
+			clickTimes = 0;
+		}
+		else{
+			newKey = mKNN.classify(features, 1);
+			if(newKey != previousKey)
+			{
+				charas += newKey;
+				Log.d(LTAG, "clockTime:1 different form previous, charas: "+charas);
+				clickTimes = 0;
+			}else{
+				//get the nearest 2 nodes
+				mKNN.classify(features, 2);
+				Item[] closest = mKNN.getClosestList();
+				Item currentItem = new Item(features);
+				//if distance is greater than a threshold, we choose the next closest 
+				if(mKNN.findDistance(closest[0], currentItem) > mKNN.DISTTHRE)
+					newKey = closest[1].category;
+				else newKey = closest[0].category;
+				charas += newKey;
+				Log.d(LTAG, "clockTime:1, same as previous, charas: "+charas);
+				clickOnceAndSame = true;//pass this value to deal with the condition that user want to click several times of backspace
+			}
+			//pass previous feature to next stage
+			this.previousKey = newKey;
+			this.previousFeature = features;
+		}
+		
+	}
+	
 	/***
 	 * This fuction is called when user click backspace button on screen
 	 * It remove one character from the displayed characters 
+	 * if it is user click backspace input and then click backspace, we regard this as 
 	 */
 	
 	public void onClickButtonBackSpace(View view)
@@ -202,5 +261,13 @@ public class TestingActivity extends Activity implements RecBufListener{
 		int len = charas.length();
 		charas = charas.substring(0, len-1);
 		text.setText(charas);
+		clickTimes++;
+		texthint.setText("clickTimes:" + String.valueOf(clickTimes));
+		if(clickTimes == 2 && clickOnceAndSame)
+		{
+			this.halt = true;
+		    ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE))
+		        .showSoftInput(editText, InputMethodManager.SHOW_FORCED);
+		}
 	}
 }

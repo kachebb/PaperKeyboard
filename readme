@@ -48,7 +48,23 @@ Todo:
 		clickTimes = 0;
 	}
 		
-		
-		
-		
-		
+Nov 13:
+Problem: click backspace on screen can possibly be regarded as keystroke 
+
+1. Implement online correction policy,
+See function:	
+private void dealwithBackSpace(double[] features)
+and OnclickButtonBackSpace
+
+2. Halt the key recognition when user input
+
+3. Modify BasicKNN.java
+a.Modified the key training function in KNN
+Add a replacement policy:
+when training set is full,
+remove the most far node from new node, and insert new node
+b. add 1 value: trainingSize---indicate the training set size for each key
+c. add 3 functons: setTrainingSize(int num), getTrainingSize and  removeLatestItem()
+
+
+4. Add clear and restart button on training screen

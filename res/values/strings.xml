@@ -11,6 +11,8 @@
     <string name="correction">click to input the correct character here</string>
 	<string name = "detectIndication">Key detection result</string>
 	<string name = "backSpace">Backspace</string>
+	<string name = "button_restart">Restart Training</string>
+	<string name = "button_clear">Clear Current Training</string>
 	
 
 </resources>

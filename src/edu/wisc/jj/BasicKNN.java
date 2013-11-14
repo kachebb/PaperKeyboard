@@ -1,16 +1,17 @@
 package edu.wisc.jj;
-import android.annotation.SuppressLint;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+
+import android.annotation.SuppressLint;
 
 /**
  * A kNN classification algorithm implementation.
@@ -20,19 +21,55 @@ import java.util.List;
 public class BasicKNN implements KNN{
 	List<Item> trainingSet;
 	Item[] closestList;
-	
-	public int test;
+	public final int DISTTHRE = 2000;
+	private int trainingSize = 5;
 	
 	public BasicKNN() {
 		this.trainingSet = new ArrayList<Item>();
 	}
-
+	
+	/**
+	 * set the trainingSize for each Key
+	 * @param num : trainingSize
+	 */
+	public void setTrainingSize(int num){
+		this.trainingSize = num;
+	}
+	
+	public int getTrainingSize(){
+		return this.trainingSize;
+	}
 	/**
 	 * add one training item to the existing training set
 	 * assume that there will be no key strokes that have exactly the same features
+	 * 
+	 * Modified by Kaichen:
+	 * 	if number of category in trainingSet == trainingSize, we need to remove
+	 *  the most far node from new node
+	 *  and then insert new feature
 	 */
 	public void addTrainingItem(String category, double[] features) {
+		Iterator<Item> it = trainingSet.iterator();
+		Item curItem;
 		Item nItem = new Item(category, features);
+		Item farItem = nItem; //TODO: I have to init this value to compile
+		double farDist = 0;
+		double curDist = 0;
+		int cateCount = 0;
+		while(it.hasNext()){
+			curItem = it.next();
+			if(curItem.category == category){
+				cateCount++;
+				//find the most far point from new 
+				if((curDist = this.findDistance(curItem, nItem))> farDist)
+				{
+					farItem = curItem; 
+					farDist = curDist;
+				}
+			}
+		}
+		if(cateCount >= this.trainingSize)
+			trainingSet.remove(farItem);
 		this.trainingSet.add(nItem);
 	}
 
@@ -74,6 +111,16 @@ public class BasicKNN implements KNN{
 	public boolean removeItemInClosestList(Item[] closestList, int index){
 		Item removeItem=closestList[index];
 		return this.trainingSet.remove(removeItem);
+	}
+	
+	/***
+	 * remove the latest input item from trainingSet
+	 * 
+	 * TODO have not tested yet
+	 */
+	
+	public void removeLatestInput(){
+		trainingSet.remove(trainingSet.size()-1);
 	}
 	
 	/**
@@ -272,7 +319,7 @@ public class BasicKNN implements KNN{
 	/**
 	 * find the distance between two items
 	 */
-	private double findDistance(Item item1, Item item2) {
+	public double findDistance(Item item1, Item item2) {
 		if (item1.features.length != item2.features.length) {
 			System.out.println("training point has different features");
 			System.exit(1);
