@@ -1,9 +1,13 @@
 package edu.wisc.perperkeyboard;
 
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 import android.annotation.SuppressLint;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -13,9 +17,12 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.View;
+import android.view.ViewGroup.LayoutParams;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 import android.widget.Toast;
@@ -41,6 +48,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private boolean halt = false;
 	private boolean clickOnceAndSame = false;
 	private double[] previousFeature;
+	private int CLASSIFY_K =4;
+	private volatile List<Button> hintButtonList;
 	@SuppressLint("NewApi")
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -59,7 +68,6 @@ public class TestingActivity extends Activity implements RecBufListener{
 		    @Override
 		    public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
 		        boolean handled = false;
-		     
 		        if (actionId == EditorInfo.IME_ACTION_SEND) {
 		           // text.setText(v.getText());
 		        	charas += v.getText().toString();
@@ -193,14 +201,45 @@ public class TestingActivity extends Activity implements RecBufListener{
 		if(!halt)
 			this.dealwithBackSpace(features);
 		else Log.d(LTAG, "screen halts audioprocessing, we do nothing");
+		
+		//test on showing hints. need structural re-organization of code
+		Item[] lastDectections=mKNN.getClosestList();
+		final String[] labels=mKNN.getLabelsFromItems(lastDectections);
+		
 		//update UI
 		this.runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
 				//if(clickTimes < 2){
-					//Toast.makeText(getApplicationContext(), "detection result "+charas, Toast.LENGTH_SHORT).show();				
+
 					texthint.setText("click Times:" + String.valueOf(clickTimes));
 					text.setText(charas);
+
+					RelativeLayout rl = (RelativeLayout)findViewById(R.id.testActivity_layout);					
+					//rm all existing hint buttons on screen
+					if (null == hintButtonList){
+						hintButtonList=new LinkedList<Button>();
+					} else {
+						for (Button mButton:hintButtonList){
+							rl.removeView(mButton);
+						}
+						hintButtonList.clear();
+					}
+					//create new hint buttons
+					for (int i=0;i<labels.length;i++){
+						Button myButton = new Button(getApplicationContext());
+						hintButtonList.add(myButton);						
+						myButton.setText(labels[i]);
+						myButton.setId(100+i);
+						RelativeLayout.LayoutParams rp= new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+						rp.addRule(RelativeLayout.BELOW,R.id.text_detectionResult);
+						if (0!=i){
+							rp.addRule(RelativeLayout.RIGHT_OF,myButton.getId()-1);												
+						}
+						myButton.setLayoutParams(rp);
+						rl.addView(myButton);
+					}
+
 				//}else
 				//{
 				//	texthint.setText("click the input box to input the correct char");
@@ -208,24 +247,24 @@ public class TestingActivity extends Activity implements RecBufListener{
 			}
 		});
 	}
+	
 	/**
 	 * This is just a function that is to make runAudioProcessing function more clear
 	 * It decides what to do according to backspace click time
 	 * 
 	 * @param features: features that are extracted by runAudiaoProcessing
 	 */ 
-	
 	private void dealwithBackSpace(double[] features){
 		String newKey;
 		if(clickTimes != 1){ //only one way to make click Time > 1, that is user click backSpace continuously
-			newKey = mKNN.classify(features, 1);
+			newKey = mKNN.classify(features, this.CLASSIFY_K);
 			mKNN.addTrainingItem(newKey, features);//online training
 			charas += newKey;
 			Log.d(LTAG, "clockTimes:0, charas: "+charas);
 			clickTimes = 0;
 		}
 		else{
-			newKey = mKNN.classify(features, 1);
+			newKey = mKNN.classify(features, this.CLASSIFY_K);
 			if(newKey != previousKey) // we think this is user's input error
 			{
 				Item currentItem = new Item(features);
@@ -240,7 +279,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 			}else{  //Newkey equals previous key, it might be our error, 
 				//if dist(feature, newKey) > threshold, we choose next closest key as output
 				//get the nearest 2 nodes
-				mKNN.classify(features, 2);
+				mKNN.classify(features, this.CLASSIFY_K);
 				Item[] closest = mKNN.getClosestList();
 				newKey = closest[1].category;
 				charas += newKey;

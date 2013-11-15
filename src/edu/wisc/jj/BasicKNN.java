@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import android.annotation.SuppressLint;
+import android.util.Log;
 
 /**
  * A kNN classification algorithm implementation.
@@ -418,6 +419,24 @@ public class BasicKNN implements KNN{
 		if (tie)
 			resultIndex=-1;
 		return resultIndex;		
+	}
+
+	/**
+	 * return the labels array from Item arrays
+	 * the returned array of labels are doesn't contain repetitive labels
+	 * @param nearItems： usually is the array returned by getClosestList 
+	 * @return
+	 */
+	@Override
+	public String[] getLabelsFromItems(Item[] nearItems) {
+		List<String> labelList=new ArrayList<String>();
+		for (Item mitem:nearItems){
+			if (!labelList.contains(mitem.category))
+				labelList.add(mitem.category);
+		}
+		String[] labelArray=labelList.toArray(new String[labelList.size()]);
+		Log.d("KNN", Arrays.toString(labelArray));
+		return labelArray;
 	}
 }
 

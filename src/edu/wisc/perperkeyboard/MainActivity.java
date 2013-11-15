@@ -32,7 +32,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
 	private static final int STROKE_CHUNKSIZE = 2000;
-	private static int TRAINNUM = 5; //how many keystroke we need to get for each key when training 
+	private static int TRAINNUM = 2; //how many keystroke we need to get for each key when training 
 	public static BasicKNN mKNN;
 	private enum InputStatus {
 		AtoZ, NUM//, LEFT, RIGtextHT, BOTTOM

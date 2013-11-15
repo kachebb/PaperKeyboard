@@ -6,27 +6,28 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
+    android:id="@+id/testActivity_layout"    
     tools:context=".TestingActivity" >
-
+ 
      <TextView
          android:id="@+id/text_detection"
          android:layout_width="200dp"
          android:layout_height="wrap_content"
          android:gravity="center"
          android:hint="@string/detectIndication"
-         android:textSize="15sp" />
+         android:textSize="13sp" />
 
      <TextView
          android:id="@+id/text_detectionResult"
          android:layout_width="fill_parent"
-         android:layout_height="fill_parent"
+         android:layout_height="wrap_content"
          android:layout_alignParentRight="true"
       	 android:layout_below="@id/text_detection"
-      	 android:layout_above= "@+id/inputChar"
-      	 android:layout_marginBottom="10dp"
-      	 android:layout_marginTop="10dp"
+         android:gravity="left"      	 
+      	 android:layout_marginBottom="3dp"
+      	 android:layout_marginTop="3dp"
          android:hint="@string/detectionResult"
-         android:textSize="25sp"
+         android:textSize="18sp"
          android:textStyle="bold" />
 
      <EditText

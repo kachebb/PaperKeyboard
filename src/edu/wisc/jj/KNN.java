@@ -1,7 +1,5 @@
 package edu.wisc.jj;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 
 public interface KNN {
@@ -56,6 +54,32 @@ public interface KNN {
 	public String[] classifyMultiple(double[][] testData, int k) ;
 
 	/**
+	 * return the closest k neighbors of last classification.
+	 * should only be called after classify to get the correct info
+	 * note: the returned array contains actual references to the training data, any modification to the any element of array will be reflected in the 
+	 * underlying training data. Do not modify the each Item element. 
+	 * @return an array of Item that is closest to the point passed into classify method. length of the array is the argument "k" passed to the classify method called last time 
+	 */
+	public Item[] getClosestList();
+	
+	/**
+	 * remove indexth element in the closestList being passed into this function from the training set 
+	 * @param closestList
+	 * @param index
+	 * @return true -- if there is indeed such an element in original training set, false if there is no such element in traing set
+	 */
+	public boolean removeItemInClosestList(Item[] closestList, int index);
+	
+	
+	/**
+	 * return the labels array from Item arrays
+	 * the returned array of labels are doesn't contain repetitive labels
+	 * @param nearItems： usually is the array returned by getClosestList 
+	 * @return
+	 */
+	public String[] getLabelsFromItems(Item[] nearItems) ;
+	
+	/**
 	 * save current training set into a file
 	 * The file and its path will be created if not exist
 	 * The file will be overwritten if it exists
@@ -82,7 +106,7 @@ public interface KNN {
 	
 	/**
 	 * print all the elements of 
-	 * @return
+p	 * @return
 	 */
 	@Override
 	public String toString();
