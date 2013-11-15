@@ -1,17 +1,14 @@
 package edu.wisc.perperkeyboard;
 
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 import android.annotation.SuppressLint;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -53,7 +50,7 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 	private boolean halt = false;
 	private boolean clickOnceAndSame = false;
 	private double[] previousFeature;
-	private int CLASSIFY_K = 4;
+	private int CLASSIFY_K = 3;
 	private volatile List<Button> hintButtonList;
 
 	//UI thread update, recording thread check
@@ -220,10 +217,10 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 		// this.dealwithBackSpace(features);
 		// else Log.d(LTAG, "screen halts audioprocessing, we do nothing");
 
-		String detectResult = mKNN.classify(features, this.CLASSIFY_K);
+		final String detectResult = mKNN.classify(features, this.CLASSIFY_K);
 		charas += detectResult;
-		mKNN.addTrainingItem(detectResult, features);
-		// test on showing hints. need structural re-organization of code
+		//add unsure sample to staging area
+		mKNN.addToStage(detectResult, features);
 		final Item[] lastDectections = mKNN.getClosestList();
 		List<String> allLabels = mKNN.getLabelsFromItems(lastDectections);
 		if (!allLabels.remove(detectResult)) {
@@ -263,9 +260,13 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 						public void onClick(View v) {
 							// race condition, UI is updating KNN, need to make
 							// sure the background thread will not change mKNN
-							mKNN.changeSampleLabel(((Button) v).getText()
-									.toString(), 0);
-							lastTouchScreenTime=System.nanoTime();							
+							lastTouchScreenTime=System.nanoTime();														
+							mKNN.correctWrongDetection(((Button) v).getText()
+									.toString(),detectResult);
+							charas=charas.substring(0,charas.length()-1);
+							charas+=((Button) v).getText().toString();
+							text.setText(charas);
+							Log.d("after correction: ", mKNN.toString());
 						}
 					});
 					RelativeLayout.LayoutParams rp = new RelativeLayout.LayoutParams(
@@ -279,11 +280,6 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 					myButton.setLayoutParams(rp);
 					rl.addView(myButton);
 				}
-
-				// }else
-				// {
-				// texthint.setText("click the input box to input the correct char");
-				// }
 			}
 		});
 	}

@@ -8,18 +8,21 @@ public class Item {
 	public String category;
 	// The feature vector of the instance
 	public double[] features;
-
+	//number of wrong detection that this item plays a role in determining majority vote
+	public int wrongTimes;
+	
 	public Item(double[] features) {
 		this.category = null;
 		this.features=new double[features.length];
+		this.wrongTimes=0;
 		for (int i = 0; i < features.length; i++)
 			this.features[i] = features[i];
 	}
 
 	public Item(String category, double[] features) {
 		this.category = category;
-		this.features = features;
 		this.features = new double[features.length];
+		this.wrongTimes=0;
 		for (int i = 0; i < features.length; i++)
 			this.features[i] = features[i];
 	}
@@ -29,7 +32,9 @@ public class Item {
 	 * Item to string should in the following format: "category:feature1,feature2,feature3...."
 	 */
 	public String toString() {
-		StringBuilder output=new StringBuilder(this.category+"==");
+		StringBuilder output=new StringBuilder(this.category+":");
+		//append wrong times
+		output.append("wrong:"+String.valueOf(this.wrongTimes)+"==");
 		int printSize=this.features.length;
 		if (printSize > 5)
 			printSize=5;
