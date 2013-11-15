@@ -1,6 +1,7 @@
 package edu.wisc.jj;
 
 import java.io.File;
+import java.util.List;
 
 public interface KNN {
 
@@ -72,12 +73,12 @@ public interface KNN {
 	
 	
 	/**
-	 * return the labels array from Item arrays
-	 * the returned array of labels are doesn't contain repetitive labels
+	 * return the labels list from Item arrays
+	 * the returned list of labels are doesn't contain repetitive labels
 	 * @param nearItems： usually is the array returned by getClosestList 
 	 * @return
 	 */
-	public String[] getLabelsFromItems(Item[] nearItems) ;
+	public List<String> getLabelsFromItems(Item[] nearItems) ;
 	
 	/**
 	 * save current training set into a file

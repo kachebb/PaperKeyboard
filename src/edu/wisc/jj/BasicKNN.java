@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -26,7 +27,7 @@ public class BasicKNN implements KNN{
 	private int trainingSize = 5;
 	
 	public BasicKNN() {
-		this.trainingSet = new ArrayList<Item>();
+		this.trainingSet = Collections.synchronizedList(new ArrayList<Item>());
 	}
 	
 	/**
@@ -174,7 +175,24 @@ public class BasicKNN implements KNN{
 		return catResult;
 	}
 	
-	
+
+	/**
+	 * change the label of the sample point
+	 * @param correctLabel
+	 * @param indexFromLast: index to the last. e.x. last item should have indexFromLast 0, second last item 1
+	 * @return whether the action of changing label is successful or not 
+	 */
+	public boolean changeSampleLabel(String correctLabel, int indexFromLast) {
+		int indexFromFront=this.trainingSet.size()-(indexFromLast+1);
+		if (indexFromFront>0 && indexFromFront<this.trainingSize){
+			Item mItem=this.trainingSet.get(indexFromFront);
+			mItem.category=correctLabel;
+			return true;
+		}
+		return false;
+			
+	}
+
 
 	/**
 	 * Classify multiple test data
@@ -428,15 +446,15 @@ public class BasicKNN implements KNN{
 	 * @return
 	 */
 	@Override
-	public String[] getLabelsFromItems(Item[] nearItems) {
+	public List<String> getLabelsFromItems(Item[] nearItems) {
 		List<String> labelList=new ArrayList<String>();
 		for (Item mitem:nearItems){
 			if (!labelList.contains(mitem.category))
 				labelList.add(mitem.category);
 		}
-		String[] labelArray=labelList.toArray(new String[labelList.size()]);
-		Log.d("KNN", Arrays.toString(labelArray));
-		return labelArray;
+//		String[] labelArray=labelList.toArray(new String[labelList.size()]);
+		Log.d("KNN",labelList.toString());
+		return labelList;
 	}
 }
 

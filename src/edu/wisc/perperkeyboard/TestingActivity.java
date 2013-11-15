@@ -17,6 +17,7 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -197,15 +198,23 @@ public class TestingActivity extends Activity implements RecBufListener{
 		this.strokeBuffer=null;
 		// get features
 		double[] features = SPUtil.getAudioFeatures(audioStrokeData);
-		// if not halt by user input by screen keyboard, continue catching and showing data
-		if(!halt)
-			this.dealwithBackSpace(features);
-		else Log.d(LTAG, "screen halts audioprocessing, we do nothing");
-		
+		// if not halt by user input by screen keyboard, continue catching and showing data-- jj. not using complex online learning right now 
+//		if(!halt)
+//			this.dealwithBackSpace(features);
+//		else Log.d(LTAG, "screen halts audioprocessing, we do nothing");
+
+		String detectResult=mKNN.classify(features, this.CLASSIFY_K);
+		charas += detectResult;
+		mKNN.addTrainingItem(detectResult, features);
 		//test on showing hints. need structural re-organization of code
-		Item[] lastDectections=mKNN.getClosestList();
-		final String[] labels=mKNN.getLabelsFromItems(lastDectections);
-		
+		final Item[] lastDectections=mKNN.getClosestList();
+		List<String> allLabels=mKNN.getLabelsFromItems(lastDectections);
+		if (!allLabels.remove(detectResult)){
+			Log.d(LTAG, "the all labels returned don't contain the detect label. WRONG！ exiting");
+			System.exit(1);
+		} 
+		final String[] labels=allLabels.toArray(new String[allLabels.size()]);
+
 		//update UI
 		this.runOnUiThread(new Runnable() {
 			@Override
@@ -231,6 +240,15 @@ public class TestingActivity extends Activity implements RecBufListener{
 						hintButtonList.add(myButton);						
 						myButton.setText(labels[i]);
 						myButton.setId(100+i);
+						myButton.setOnClickListener(new OnClickListener() {
+							@Override
+							public void onClick(View v) {
+								Log.d(LTAG, "in hint button onclick. before changing :  "+mKNN.toString());								
+								//race condition, UI is updating KNN, need to make sure the background thread will not change mKNN  
+								mKNN.changeSampleLabel(((Button)v).getText().toString(), 0);
+								Log.d(LTAG, "in hint button onclick. after changing :  "+mKNN.toString());																
+							}
+						});
 						RelativeLayout.LayoutParams rp= new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
 						rp.addRule(RelativeLayout.BELOW,R.id.text_detectionResult);
 						if (0!=i){

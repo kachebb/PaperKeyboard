@@ -29,8 +29,11 @@ public class Item {
 	 * Item to string should in the following format: "category:feature1,feature2,feature3...."
 	 */
 	public String toString() {
-		StringBuilder output=new StringBuilder(this.category+":");
-		for (int index=0;index<this.features.length;index++){
+		StringBuilder output=new StringBuilder(this.category+"==");
+		int printSize=this.features.length;
+		if (printSize > 5)
+			printSize=5;
+		for (int index=0;index<printSize;index++){
 			output.append(features[index]);
 			output.append(",");
 		}
