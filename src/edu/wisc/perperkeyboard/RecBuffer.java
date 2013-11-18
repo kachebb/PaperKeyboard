@@ -19,7 +19,7 @@ import android.util.Log;
 public class RecBuffer implements Runnable {
 	private static final String LTAG = "jjTag";
 	DataOutputStream os; // the input for current run time
-	private static final int BUFSIZE = 48000 *2 * 3/10 * 2;
+	private static final int BUFSIZE = 10000;//48000 *2 * 3/10 * 2;
 	// the receiving thread
 	private RecBufListener bufReceiver; //assume only one receiver present in the system
 	

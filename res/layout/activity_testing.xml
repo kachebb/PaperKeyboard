@@ -6,12 +6,20 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context=".TestingActivity" >
+    tools:context=".TestingActivity" 
+    android:keepScreenOn="true" >
 
+      <TextView
+         android:id="@+id/text_debugKNN"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         android:hint="@string/debugKNN"
+         android:textSize="12sp" />
      <TextView
          android:id="@+id/text_detection"
          android:layout_width="200dp"
          android:layout_height="wrap_content"
+         android:layout_below = "@id/text_debugKNN"
          android:gravity="center"
          android:hint="@string/detectIndication"
          android:textSize="15sp" />

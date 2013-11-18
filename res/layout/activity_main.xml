@@ -4,11 +4,19 @@
     android:layout_height="match_parent"
     android:paddingLeft = "16dp"
     android:paddingRight = "16dp"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:keepScreenOn="true">
+    <TextView
+         android:id="@+id/text_debugKNN"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         android:hint="@string/debugKNN"
+         android:textSize="12sp" />
     <TextView android:id = "@+id/text_showhint"   
         android:layout_width = "400dp"
         android:layout_height = "fill_parent"
         android:layout_above = "@+id/mButton"
+        android:layout_below="@id/text_debugKNN"
         android:textSize="30sp"
         android:gravity = "center"
         android:hint = "@string/text_hint"

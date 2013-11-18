@@ -58,10 +58,11 @@ public class BasicKNN implements KNN{
 		int cateCount = 0;
 		while(it.hasNext()){
 			curItem = it.next();
-			if(curItem.category == category){
+			if(curItem.category.equals(category)){
 				cateCount++;
 				//find the most far point from new 
-				if((curDist = this.findDistance(curItem, nItem))> farDist)
+				curDist = this.findDistance(curItem, nItem);
+				if(curDist > farDist)
 				{
 					farItem = curItem; 
 					farDist = curDist;
@@ -305,7 +306,7 @@ public class BasicKNN implements KNN{
 	}
 	
 	/**
-	 * print all the elements of 
+	 * print all the elements with feature
 	 * @return
 	 */
 	@Override
@@ -315,6 +316,14 @@ public class BasicKNN implements KNN{
 			result.append(eachItem.toString());
 		return result.toString();
 	}
+	
+	public String getChars(){
+		StringBuilder result =new StringBuilder();
+		for (Item eachItem: this.trainingSet)
+			result.append(eachItem.category);
+		return result.toString();
+	}
+	
 	
 	/**
 	 * find the distance between two items

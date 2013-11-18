@@ -6,9 +6,9 @@ import java.util.Arrays;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -18,25 +18,32 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
-import android.widget.Toast;
 import edu.wisc.jj.BasicKNN;
 import edu.wisc.jj.Item;
 import edu.wisc.jj.SPUtil;
 
 public class TestingActivity extends Activity implements RecBufListener{
+	/*************constant values***********************/
 	private static final String LTAG = "testing activity debug";	
 	private static final int STROKE_CHUNKSIZE = 2000;
+	
+	/*************UI ********************************/
+	private TextView text;
+	private EditText editText;
+	private TextView texthint;
+	private volatile static String charas = "";
+	private TextView debugKNN;
+	/*************Audio Processing*******************/
 	private BasicKNN mKNN;
 	private boolean inStrokeMiddle;
 	private int strokeSamplesLeft;
 	private Thread recordingThread;
-	private RecBuffer mBuffer ;
-	private TextView text;
-	private EditText editText;
+	private RecBuffer mBuffer ;	
 	private short[] strokeBuffer;
-	private volatile static String charas = "";
-	private TextView texthint;
+
+	/************self-correction and online training control**************/
 	private int clickTimes = 0;
+	private boolean onlineTraining = true;
 	private String previousKey = "";
 	private boolean halt = false;
 	private boolean clickOnceAndSame = false;
@@ -45,16 +52,14 @@ public class TestingActivity extends Activity implements RecBufListener{
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		/************init UI************************/
 		setContentView(R.layout.activity_testing);
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 		text = (TextView) findViewById(R.id.text_detectionResult);
 		texthint = (TextView) findViewById(R.id.text_detection);
-		halt = false;
-		//Intent i = getIntent();
-		//mKNN = (KNN)i.getSerializableExtra("SampleObject");
-		mKNN = MainActivity.mKNN;
-		text.setText("Training Size:"+String.valueOf(mKNN.getTrainingSize()));
 		editText = (EditText) findViewById(R.id.inputChar);
+		debugKNN = (TextView) findViewById(R.id.text_debugKNN);
+		
 		editText.setOnEditorActionListener(new OnEditorActionListener() {
 		    @Override
 		    public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
@@ -63,9 +68,10 @@ public class TestingActivity extends Activity implements RecBufListener{
 		        if (actionId == EditorInfo.IME_ACTION_SEND) {
 		           // text.setText(v.getText());
 		        	charas += v.getText().toString();
-		        	//if training set is full, we need to remove the most far point
+		        	//if training set is full, we need to the most far point
 		        	mKNN.addTrainingItem(v.getText().toString(), previousFeature);
 		        	text.setText(charas);
+		        	debugKNN.setText(mKNN.getChars());
 		        	clickTimes = 0;
 		        	halt = false;
 		        	clickOnceAndSame = false;
@@ -78,7 +84,14 @@ public class TestingActivity extends Activity implements RecBufListener{
 		});
 		editText.clearFocus();
 		
-		//Init RecBuffer and thread
+		/***********init values******************/
+		halt = false;
+		//Intent i = getIntent();
+		//mKNN = (KNN)i.getSerializableExtra("SampleObject");
+		mKNN = MainActivity.mKNN;
+		text.setText("Training Size:"+String.valueOf(mKNN.getTrainingSize()));
+		debugKNN.setText(mKNN.getChars());
+		/****************Init RecBuffer and thread*****************/
 		mBuffer = new RecBuffer();
 		recordingThread = new Thread(mBuffer);
 		clickTimes = 0;
@@ -201,6 +214,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 					//Toast.makeText(getApplicationContext(), "detection result "+charas, Toast.LENGTH_SHORT).show();				
 					texthint.setText("click Times:" + String.valueOf(clickTimes));
 					text.setText(charas);
+					debugKNN.setText(mKNN.getChars());
 				//}else
 				//{
 				//	texthint.setText("click the input box to input the correct char");
@@ -219,7 +233,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 		String newKey;
 		if(clickTimes != 1){ //only one way to make click Time > 1, that is user click backSpace continuously
 			newKey = mKNN.classify(features, 1);
-			mKNN.addTrainingItem(newKey, features);//online training
+			if(onlineTraining)
+				mKNN.addTrainingItem(newKey, features);//online training
 			charas += newKey;
 			Log.d(LTAG, "clockTimes:0, charas: "+charas);
 			clickTimes = 0;
@@ -230,12 +245,12 @@ public class TestingActivity extends Activity implements RecBufListener{
 			{
 				Item currentItem = new Item(features);
 				Item[] closest = mKNN.getClosestList();
-				//if distance is greater than a threshold, we choose the next closest 
-				if(mKNN.findDistance(closest[0], currentItem) > mKNN.DISTTHRE)
-				{
+				//only if distance is greater than a threshold we thinks they are two different key
+			//  if(mKNN.findDistance(closest[0], currentItem) > mKNN.DISTTHRE) 
+			//	{
 					clickTimes = 0;
 					Log.d(LTAG, "clockTime:1 different form previous, charas: "+charas);
-				}
+			//	}
 				charas += newKey;
 			}else{  //Newkey equals previous key, it might be our error, 
 				//if dist(feature, newKey) > threshold, we choose next closest key as output
@@ -247,10 +262,10 @@ public class TestingActivity extends Activity implements RecBufListener{
 				Log.d(LTAG, "clockTime:1, same as previous, charas: "+charas);
 				clickOnceAndSame = true;//pass this value to deal with the condition that user want to click several times of backspace
 			}
-			//pass previous feature to next stage
-			this.previousKey = newKey;
-			this.previousFeature = features;
 		}
+		//pass previous feature to next stage
+		this.previousKey = newKey;
+		this.previousFeature = features;
 		
 	}
 	
@@ -263,14 +278,24 @@ public class TestingActivity extends Activity implements RecBufListener{
 	public void onClickButtonBackSpace(View view)
 	{
 		int len = charas.length();
-		charas = charas.substring(0, len-1);
+		if(len > 0)
+			charas = charas.substring(0, len-1);
+		//this.halt = true;
+	    
 		text.setText(charas);
+		debugKNN.setText(mKNN.getChars());
 		clickTimes++;
 		texthint.setText("clickTimes:" + String.valueOf(clickTimes));
+		if(onlineTraining)
+			mKNN.removeLatestInput();
+		// SLEEP 1 SECONDS HERE ... But it won't work to stop the detection
+		 //  try{ Thread.sleep(1000);}catch(Exception e){}	
+		//    this.halt = false;
 		if(clickTimes == 2 && clickOnceAndSame)
 		{
 			this.halt = true;
-			mKNN.removeLatestInput(); //we did wrong training when testing, remove it
+			if(onlineTraining)
+				mKNN.removeLatestInput(); //we did wrong training when testing, remove it
 		    ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE))
 		        .showSoftInput(editText, InputMethodManager.SHOW_FORCED);
 		}

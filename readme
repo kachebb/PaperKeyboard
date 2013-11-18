@@ -82,3 +82,10 @@ when training set is full,
 remove the most far node from new node, and insert new node
 b. add 1 value: trainingSize---indicate the training set size for each key
 c. add 3 functons: setTrainingSize(int num), getTrainingSize and  removeLatestItem()
+
+
+Nov 15th
+1. Try to block audio processing immediately after user click backspace on screen. But failed.
+2. disable screen sleep
+3. Add a textview to show what is in the mKNN
+4. Set the RecBuffer size to 10000.

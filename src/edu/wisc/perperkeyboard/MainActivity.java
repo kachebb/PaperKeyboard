@@ -50,7 +50,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	private static Button mButton;
 	private Thread recordingThread;
 	private RecBuffer mBuffer;
-
+	private static TextView debugKNN;
 	/************audio collection***********/
 	private short[] strokeBuffer;
 	private boolean inStrokeMiddle;
@@ -70,7 +70,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		setContentView(R.layout.activity_main);
 		text = (TextView) findViewById(R.id.text_showhint);
 		mButton = (Button) findViewById(R.id.mButton);
-		
+		debugKNN = (TextView) findViewById(R.id.text_debugKNN);
 		/******init values*************/
 		this.inStrokeMiddle = false;
 		this.strokeSamplesLeft = 0;
@@ -83,7 +83,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		inputstatus = it.next();
 		this.TRAINNUM = 3;
 		
-		/********* create knn*************/
+		/*********create knn*************/
 		mKNN = new BasicKNN();
 		mKNN.setTrainingSize(5);
 		// add training item names
@@ -147,9 +147,9 @@ public class MainActivity extends Activity implements RecBufListener{
 			} else { // there is an stroke
 				// this whole stroke is inside current buffer
 				if (data.length - startIdx >= STROKE_CHUNKSIZE * 2) {
-//					Log.d(LTAG,
-//							"key stroke, data length > chuncksize, data length: "
-//									+ data.length);
+					Log.d(LTAG,
+							"key stroke, data length > chuncksize, data length: "
+									+ data.length);
 					this.inStrokeMiddle = false;
 					this.strokeSamplesLeft = 0;
 					this.strokeBuffer = Arrays.copyOfRange(data, startIdx,
@@ -224,8 +224,8 @@ public class MainActivity extends Activity implements RecBufListener{
 				this.register(mBuffer);
 				recordingThread.start();
 			} else {
-				recordingThread.interrupt();
-				recordingThread = null;
+				//recordingThread.interrupt();
+			//	recordingThread = null;
 			}
 		}
 	}
@@ -262,6 +262,7 @@ public class MainActivity extends Activity implements RecBufListener{
 				+ "current training: "
 				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
 				+ String.valueOf(TRAINNUM - TrainedNum) + "left");
+		debugKNN.setText(mKNN.getChars());
 	
 	}
 	
@@ -280,7 +281,7 @@ public class MainActivity extends Activity implements RecBufListener{
 				+ "current training: "
 				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
 				+ String.valueOf(TRAINNUM - TrainedNum) + "left");
-		
+		debugKNN.setText(mKNN.getChars());
 	}
 
 	/**
@@ -313,7 +314,7 @@ public class MainActivity extends Activity implements RecBufListener{
 				inputstatus = it.next();
 				curTrainingItemIdx  = 0;
 				
-				return;
+				//return;
 			}
 			else{
 				this.finishedTraining=true;
@@ -326,12 +327,16 @@ public class MainActivity extends Activity implements RecBufListener{
 			@Override
 			public void run() {
 				if(!finishedTraining)
+				{
 					text.setText(inputstatus.toString()  + "is recording. " + "\n"
 				+ "current training: "
 				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
 				+ String.valueOf(TRAINNUM - TrainedNum) + "left");
+					debugKNN.setText(mKNN.getChars());	
+				}
 				else {
 					text.setText("Training finished, click to start testing");
+					debugKNN.setText(mKNN.getChars());
 					mButton.setText("Click to Test");
 				}
 				

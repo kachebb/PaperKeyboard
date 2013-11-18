@@ -13,6 +13,7 @@
 	<string name = "backSpace">Backspace</string>
 	<string name = "button_restart">Restart Training</string>
 	<string name = "button_clear">Clear Current Training</string>
+	<string name = "debugKNN">show KNN</string>
 	
 
 </resources>
