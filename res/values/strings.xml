@@ -9,11 +9,16 @@
     <string name="title_activity_testing">Testing</string>
     <string name="detectionResult">detection result</string>
     <string name="correction">click to input the correct character here</string>
-	<string name = "detectIndication">Key detection result</string>
+	<string name = "detectIndication">ClickTimes</string>
 	<string name = "backSpace">Backspace</string>
 	<string name = "button_restart">Restart Training</string>
 	<string name = "button_clear">Clear Current Training</string>
 	<string name = "debugKNN">show KNN</string>
-	
+	<string name = "inputTimes_hint">Total input</string>
+	<string name = "inputTimes">input times</string>
+	<string name = "errorTimes_hint">Error input</string>
+	<string name = "errorTimes">input times</string>
+	<string name = "toggleshift">SHIFT</string>
+		<string name = "togglecaps">CAPS</string>
 
 </resources>

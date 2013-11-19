@@ -32,15 +32,16 @@ public class MainActivity extends Activity implements RecBufListener{
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
 	private static final int STROKE_CHUNKSIZE = 2000;
-	private static int TRAINNUM = 5; //how many keystroke we need to get for each key when training 
+	private static int TRAINNUM = 3; //how many keystroke we need to get for each key when training 
 	public static BasicKNN mKNN;
 	private enum InputStatus {
-		AtoZ, NUM//, LEFT, RIGtextHT, BOTTOM
+		AtoZ, NUM//, LEFT, RIGHT, BOTTOM
 	}
 	/****to track input stage*************/
 	// expected chunk number in each stage
-//	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 6 };
-	private final int[] ExpectedInputNum = { 3, 2, 4, 11, 6 };
+//	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 5 };
+//	private final int[] ExpectedInputNum = { 3, 1, 4, 11, 6 };
+	private final int[] ExpectedInputNum = { 4, 1};
 	private InputStatus inputstatus;
 	private Set<InputStatus> elements;
 	Iterator<InputStatus> it; 
@@ -75,13 +76,11 @@ public class MainActivity extends Activity implements RecBufListener{
 		this.inStrokeMiddle = false;
 		this.strokeSamplesLeft = 0;
 		curTrainingItemIdx = 0;
-		TrainedNum = 0; 
 		this.finishedTraining=false;		
 		// iterator for input stage
 		elements = EnumSet.allOf(InputStatus.class);
 		it = elements.iterator();
 		inputstatus = it.next();
-		this.TRAINNUM = 3;
 		
 		/*********create knn*************/
 		mKNN = new BasicKNN();
@@ -310,11 +309,9 @@ public class MainActivity extends Activity implements RecBufListener{
 		if (this.ExpectedInputNum[inputstatus.ordinal()] == this.curTrainingItemIdx){
 			if(it.hasNext())
 			{
-				Log.d(LTAG, "throwed interrupt in runAudioProcessing");
 				inputstatus = it.next();
+				Log.d(LTAG, "change to next character. next char: "+inputstatus);				
 				curTrainingItemIdx  = 0;
-				
-				//return;
 			}
 			else{
 				this.finishedTraining=true;
@@ -354,9 +351,12 @@ class addTrainingItem {
 	public static void addTrainingItems(ArrayList<ArrayList<String>> trainingItemName)
 	{
 		ArrayList<String> AtoZArray = new ArrayList<String>();
+		//TODO This is only used for debug
+		AtoZArray.add("LShift");
+		AtoZArray.add("Caps");
 		// add characters into training item
 		for (int idx = 0; idx < 26; idx++)
-			AtoZArray.add(String.valueOf((char)('A' + idx)));
+			AtoZArray.add(String.valueOf((char)('a' + idx)));
 		trainingItemName.add(AtoZArray);
 		ArrayList<String> NumArray = new ArrayList<String>();
 		// add numbers into training item
@@ -368,16 +368,16 @@ class addTrainingItem {
 		trainingItemName.add(NumArray);
 		
 		ArrayList<String> LeftArray = new ArrayList<String>();
-		// add numbers into training item
-		LeftArray.add("~");
+		// add left into training item
+		LeftArray.add("`");
 		LeftArray.add("Tab");
 		LeftArray.add("Caps");
-		LeftArray.add("L Shift");
+		LeftArray.add("LShift");
 		trainingItemName.add(LeftArray);
 		
 		
 		ArrayList<String> RightArray = new ArrayList<String>();
-		// add numbers into training item
+		// add right into training item
 		RightArray.add("BackSpace");
 		RightArray.add("\\");
 		RightArray.add("]");
@@ -385,7 +385,7 @@ class addTrainingItem {
 		RightArray.add("Enter");
 		RightArray.add("'");
 		RightArray.add(";");
-		RightArray.add("R Shift");
+		RightArray.add("RShift");
 		RightArray.add("/");
 		RightArray.add(".");
 		RightArray.add(",");
@@ -394,13 +394,12 @@ class addTrainingItem {
 		ArrayList<String> BottomArray = new ArrayList<String>();
 		// add numbers into training item
 		BottomArray.add("L Ctrl");
-		BottomArray.add("Windows");
+		//BottomArray.add("Windows");
 		BottomArray.add("L Alt");
 		BottomArray.add("Space");
 		BottomArray.add("R Alt");
 		BottomArray.add("R Ctrl");
-		trainingItemName.add(BottomArray);
-		
-		
+		trainingItemName.add(BottomArray);		
 	}
+	
 }
