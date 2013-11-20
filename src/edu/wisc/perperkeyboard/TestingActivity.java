@@ -251,25 +251,8 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 		//set shift and caps condition
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K);
 		//decide which character to show
-		CapTrans cap = new CapTrans();
-		if(this.caps){
-			if(!this.shift){
-				charas+= cap.transWhenCaps(detectResult);
-				showDetectResult.add(cap.transWhenCaps(detectResult));
-			}else {
-				charas+= detectResult;
-				showDetectResult.add(detectResult);
-			}
-		}else{
-			if(this.shift){
-				showDetectResult.add(cap.transWhenCaps(detectResult));
-				charas+= cap.transWhenCaps(detectResult);
-			}
-			else{
-				charas+=detectResult;
-				showDetectResult.add(detectResult);
-			}
-		}
+		this.updateData(detectResult);
+		
 		this.shift = false; //clear shift after use
 		if(detectResult.equals("LShift") || detectResult.equals("RShift")){
 			this.shift = true;
@@ -294,21 +277,8 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 			@Override
 			public void run() {
 				// if(clickTimes < 2){
-				/***Updata UI********/
-				texthint.setText("click Times:" + String.valueOf(clickTimes));
-				//text.setText(charas);
-				text.setText(showDetectResult.toString());
-				totalInputText.setText(String.valueOf(totalInputTimes));
-				errorInputText.setText(String.valueOf(errorInputTimes));
-				if(shift){
-					//ShiftButton.animate();
-					ShiftButton.setChecked(true);
-					texthint.setText("SHIFT");
-				}
-				else ShiftButton.setChecked(false);
-				if(caps){
-					CapsButton.setChecked(true);
-				}else CapsButton.setChecked(false);
+				/***Update UI********/
+				updateUI();
 				
 				/********hint buttons*************/
 				RelativeLayout rl = (RelativeLayout) findViewById(R.id.testActivity_layout);				
@@ -337,14 +307,30 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 									.toString(),detectResult);
 							charas=charas.substring(0,charas.length()-1);
 							showDetectResult.remove(showDetectResult.size()-1);
-							charas+=((Button) v).getText().toString();
-							showDetectResult.add(((Button)v).getText().toString());
-							//text.setText(charas);
-							text.setText(showDetectResult.toString());
+							//update output according to shift and caps
+							updateData(((Button)v).getText().toString());
+							
+							/*******if false recognition result is shift or caps**************/
+							if(detectResult.equals("LShift") || detectResult.equals("RShift")){
+								shift = false;
+							}
+							if(detectResult.equals("Caps")){
+								caps = !caps;
+							}
+							
+							/******if new correction input is shift or caps**********/
+							if(((Button)v).getText().toString().equals("LShift")
+									|| ((Button)v).getText().toString().equals("RShift"))
+								shift = true;
+							if(((Button)v).getText().toString().equals("Caps"))
+								caps = true;
+							
+							
 							Log.d("after correction: ", mKNN.toString());
 							
 							errorInputTimes++;
-							errorInputText.setText(String.valueOf(errorInputTimes));
+							//Update UI;
+							updateUI();
 						}
 					});
 					RelativeLayout.LayoutParams rp = new RelativeLayout.LayoutParams(
@@ -440,6 +426,57 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 		}
 	}
 
+	
+	/***
+	 * when ever new input is changed, use this function to decide which data to be add into the string
+	 * this function concerns the SHIFT and CAPSLOCK
+	 * @param newData
+	 */
+	public void updateData(String newData){
+		String detectResult = newData;
+		CapTrans cap = new CapTrans();
+		if(this.caps){
+			if(!this.shift){
+				charas+= cap.transWhenCaps(detectResult);
+				showDetectResult.add(cap.transWhenCaps(detectResult));
+			}else {
+				charas+= detectResult;
+				showDetectResult.add(detectResult);
+			}
+		}else{
+			if(this.shift){
+				showDetectResult.add(cap.transWhenCaps(detectResult));
+				charas+= cap.transWhenCaps(detectResult);
+			}
+			else{
+				charas+=detectResult;
+				showDetectResult.add(detectResult);
+			}
+		}
+		
+	}
+	
+	
+	public void updateUI(){
+		/***Update UI********/
+		texthint.setText("click Times:" + String.valueOf(clickTimes));
+		//text.setText(charas);
+		text.setText(showDetectResult.toString());
+		totalInputText.setText(String.valueOf(totalInputTimes));
+		errorInputText.setText(String.valueOf(errorInputTimes));
+		if(shift){
+			//ShiftButton.animate();
+			ShiftButton.setChecked(true);
+		}
+		else ShiftButton.setChecked(false);
+		if(caps){
+			CapsButton.setChecked(true);
+		}else CapsButton.setChecked(false);
+		errorInputText.setText(String.valueOf(errorInputTimes));
+		debugKNN.setText(mKNN.getChars());
+		
+	}
+	
 	//use sensors to detect whether user is touching screen
 	//touching screen may likely to cause an detection of key. Try to avoid such case
 	@Override

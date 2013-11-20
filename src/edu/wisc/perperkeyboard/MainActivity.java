@@ -32,7 +32,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
 	private static final int STROKE_CHUNKSIZE = 2000;
-	private static int TRAINNUM = 3; //how many keystroke we need to get for each key when training 
+	private static int TRAINNUM = 2; //how many keystroke we need to get for each key when training 
 	public static BasicKNN mKNN;
 	private enum InputStatus {
 		AtoZ, NUM//, LEFT, RIGHT, BOTTOM
@@ -231,29 +231,41 @@ public class MainActivity extends Activity implements RecBufListener{
 	
 	public void onClickClear(View view){
 		//remove latest input
-		if(curTrainingItemIdx == 0 && TrainedNum == 0){ //means we just got to new input stage
+		if(curTrainingItemIdx == 0){ //means we just got to new input stage
 			//find previous stage
-			Set<InputStatus> tempelements =  EnumSet.allOf(InputStatus.class);;
-			Iterator<InputStatus> newit = elements.iterator();
-			Iterator<InputStatus> previousIt = null;
-			//TODO this code might have bug
-			while(newit.hasNext()){
-				if (newit.hashCode() == it.hashCode() && previousIt != null)
-				{
-					it = previousIt;
-					curTrainingItemIdx = ExpectedInputNum[inputstatus.ordinal()]-1;
-					TrainedNum = TRAINNUM-1;
+			Set<InputStatus> elements =  EnumSet.allOf(InputStatus.class);
+			Iterator<InputStatus> firstEle = elements.iterator();
+			InputStatus fistStatus = firstEle.next();
+			if(inputstatus.equals(fistStatus)){
+				if(TrainedNum!=0){
+					Iterator<InputStatus> newit = elements.iterator();
+					//TODO this code might have bug
+					while(newit.hasNext()){
+						inputstatus = newit.next();
+					}
+					it = newit;
+					int len = ExpectedInputNum.length -1;
+					curTrainingItemIdx = ExpectedInputNum[len] -1;
+					TrainedNum --;
 					mKNN.removeLatestInput();
-					break;
 				}
-				newit.next();
+			}else{
+				Iterator<InputStatus> newit = elements.iterator();
+				InputStatus previousstatus = newit.next();
+				//find previous stage
+				while(newit.hasNext() && previousstatus.ordinal() < inputstatus.ordinal()-1)
+				{
+					previousstatus = newit.next();
+				}
+				it = newit;
+				inputstatus = previousstatus;
+				curTrainingItemIdx = ExpectedInputNum[inputstatus.ordinal()] -1;
+				mKNN.removeLatestInput();
 			}
-		}else if(TrainedNum == 0){ // means we just got to new input key, but not the first key of input stage
+			
+			
+		}else{ // means we just got to new input key, but not the first key of input stage
 			curTrainingItemIdx --;
-			TrainedNum = TRAINNUM -1;
-			mKNN.removeLatestInput();
-		}else{
-			TrainedNum --;
 			mKNN.removeLatestInput();
 		}
 		//show new info
@@ -299,13 +311,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		mKNN.addTrainingItem(
 				trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx),
 				features);
-		TrainedNum ++;
-		if(TrainedNum == TRAINNUM)
-		{
-			curTrainingItemIdx++;
-			TrainedNum = 0;
-		}
-		
+		curTrainingItemIdx++;		
 		if (this.ExpectedInputNum[inputstatus.ordinal()] == this.curTrainingItemIdx){
 			if(it.hasNext())
 			{
@@ -314,9 +320,18 @@ public class MainActivity extends Activity implements RecBufListener{
 				curTrainingItemIdx  = 0;
 			}
 			else{
-				this.finishedTraining=true;
-				//kill recording thread (myself)
-				recordingThread.interrupt();
+				TrainedNum ++;
+				if(TrainedNum == TRAINNUM)
+				{
+					this.finishedTraining=true;
+					//kill recording thread (myself)
+					recordingThread.interrupt();
+				}else{
+					elements = EnumSet.allOf(InputStatus.class);
+					it = elements.iterator();
+					inputstatus = it.next();
+					curTrainingItemIdx = 0;
+				}
 			}
 		} 
 		//update UI
@@ -352,8 +367,8 @@ class addTrainingItem {
 	{
 		ArrayList<String> AtoZArray = new ArrayList<String>();
 		//TODO This is only used for debug
-		AtoZArray.add("LShift");
-		AtoZArray.add("Caps");
+//		AtoZArray.add("LShift");
+//		AtoZArray.add("Caps");
 		// add characters into training item
 		for (int idx = 0; idx < 26; idx++)
 			AtoZArray.add(String.valueOf((char)('a' + idx)));
