@@ -262,14 +262,10 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 		}
 		//add unsure sample to staging area
 		mKNN.addToStage(detectResult, features);
-		final Item[] lastDectections = mKNN.getClosestList();
-		List<String> allLabels = mKNN.getLabelsFromItems(lastDectections);
-		if (!allLabels.remove(detectResult)) {
-			Log.d(LTAG,
-					"the all labels returned don't contain the detect label. WRONG！ exiting");
-			System.exit(1);
-		}
-		final String[] labels = allLabels.toArray(new String[allLabels.size()]);
+		
+		//get hints from KNN
+		//argument is the number of hints needed
+		final String[] labels = mKNN.getHints(4);
 
 		// update UI
 		this.runOnUiThread(new Runnable() {

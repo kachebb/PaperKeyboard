@@ -1,5 +1,6 @@
 package edu.wisc.jj;
 
+import android.annotation.SuppressLint;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -11,26 +12,29 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import android.annotation.SuppressLint;
-import android.util.Log;
+import java.util.TreeMap;
 
 /**
  * A kNN classification algorithm implementation.
  * 
  */
-@SuppressLint("NewApi")
-public class BasicKNN implements KNN {
+public class BasicKNN implements KNN{
 	List<Item> trainingSet;
 	Item[] closestList;
 	public final int DISTTHRE = 1;
 	private int trainingSize = 5; // number of training samples to keep for each
 									// category. default 5
 	private Item staged;
-
+	//sorted item's categories given distance. updated each time when classify is called
+	//it is just used for hints instead of actual classification
+	//onlyclosestList will determine the result of classification
+	TreeMap<Double,String> sortedItemMap;
+	
+	//predicted label of last classification. helper for getHints
+	private String lastPredictedLabel;
+	
 	public BasicKNN() {
 		this.trainingSet = Collections.synchronizedList(new ArrayList<Item>());
 	}
@@ -57,33 +61,9 @@ public class BasicKNN implements KNN {
 	 * add one training item to the existing training set assume that there will
 	 * be no key strokes that have exactly the same features
 	 * 
-	 * Modified by Kaichen: if number of category in trainingSet ==
-	 * trainingSize, we need to remove the most far node from new node and then
-	 * insert new feature
 	 */
 	public void addTrainingItem(String category, double[] features) {
-		// Iterator<Item> it = trainingSet.iterator();
-		// Item curItem;
 		Item nItem = new Item(category, features);
-
-		// Item farItem = nItem; //TODO: I have to init this value to compile
-		// double farDist = 0;
-		// double curDist = 0;
-		// int cateCount = 0;
-		// while(it.hasNext()){
-		// curItem = it.next();
-		// if(curItem.category == category){
-		// cateCount++;
-		// //find the most far point from new
-		// if((curDist = this.findDistance(curItem, nItem))> farDist)
-		// {
-		// farItem = curItem;
-		// farDist = curDist;
-		// }
-		// }
-		// }
-		// if(cateCount >= this.trainingSize)
-		// trainingSet.remove(farItem);
 		this.trainingSet.add(nItem);
 	}
 
@@ -116,6 +96,7 @@ public class BasicKNN implements KNN {
 	 *         classify method. length of the array is the argument "k" passed
 	 *         to the classify method called last time
 	 */
+	@SuppressLint("NewApi")
 	public Item[] getClosestList() {
 		return Arrays.copyOf(this.closestList, this.closestList.length);
 	}
@@ -157,7 +138,10 @@ public class BasicKNN implements KNN {
 	public String classify(double[] testData, int k) {
 		// commit whatever in staging area into trainingset
 		this.commit();
-
+		
+		//create new sortedItem map
+		this.sortedItemMap=new TreeMap<Double,String>();
+		
 		// clear closest set
 		this.closestList = new Item[k];
 
@@ -178,11 +162,17 @@ public class BasicKNN implements KNN {
 		for (int i = 0; i < nns.length; i++) {
 			double distance = findDistance(tItem, this.trainingSet.get(i));
 			topBound = addItemToTop(this.trainingSet.get(i), nns, distance);
+			
+			//update sortedItemMap 
+			this.sortedItemMap.put(distance, this.trainingSet.get(i).category);
 		}
 		// find kNN in trainingData
 		for (int i = nns.length; i < this.trainingSet.size(); i++) {
 			Item rItem = this.trainingSet.get(i);
 			double distance = findDistance(tItem, rItem);
+			//update sortedItemMap 
+			this.sortedItemMap.put(distance, rItem.category);
+			
 			if (distance < topBound) {
 				// add to nns if the distance is smaller than the top bound,
 				// also update the topBound
@@ -190,11 +180,13 @@ public class BasicKNN implements KNN {
 			}
 		}
 		// get predicted category, save in KNNResult.categoryAssignment
-		catResult = getCat(nns);
+		catResult = getCat(nns,nns.length);
 		for (int idx = 0; idx < nns.length; idx++) {
 			this.closestList[idx] = nns[idx].item;
 		}
 		updateWrongTimesAfterClassify(this.closestList, catResult);
+		//record label predicted
+		this.lastPredictedLabel=catResult;
 		return catResult;
 	}
 
@@ -333,6 +325,7 @@ public class BasicKNN implements KNN {
 
 	/**
 	 * print all the elements with feature
+	 * 
 	 * @return
 	 */
 	@Override
@@ -343,14 +336,18 @@ public class BasicKNN implements KNN {
 		return result.toString();
 	}
 	
-	public String getChars(){
-		StringBuilder result =new StringBuilder();
-		for (Item eachItem: this.trainingSet)
-			result.append(eachItem.category);
-		return result.toString();
-	}
 	
-	
+	/**
+	 * return all the characters(label) in the KNN right now 
+	 * @return
+	 */
+    public String getChars(){
+        StringBuilder result =new StringBuilder();
+        for (Item eachItem: this.trainingSet)
+                result.append(eachItem.category);
+        return result.toString();
+    }	
+
 	/**
 	 * find the distance between two items
 	 */
@@ -369,13 +366,13 @@ public class BasicKNN implements KNN {
 	}
 
 	/**
-	 * add the item to the neareast neighbor, return the loose bound of the
-	 * neareast neighbors
+	 * add the item to the nearest neighbor, return the loose bound of the
+	 * nearest neighbors
 	 */
 	double addItemToTop(Item rItem, ItemDis[] nns, double distance) {
 		ItemDis mItemDis = new ItemDis(rItem, distance);
 		for (int i = 0; i < nns.length; i++) {
-			if (nns[i] == null) { // hanlde initilization
+			if (nns[i] == null) { // handle initialization
 				nns[i] = mItemDis;
 				break;
 			} else if (distance < nns[i].distance) {
@@ -400,14 +397,17 @@ public class BasicKNN implements KNN {
 
 	/**
 	 * get the majority category of the nns
-	 * 
+	 *
+	 * @param ori, the array to get categories from
+	 * @param validLength, valid length of item in that array
 	 * @return return the majority vote of the k nearest neighbors if no tie.
-	 *         Return the closest one's label if there is a tie.
+	 *         Return the majority vote without the farthest point if tied.
 	 */
-	private String getCat(ItemDis[] ori) {
+	private String getCat(ItemDis[] ori, int validLength) {
 		List<String> category = new ArrayList<String>();
 		int[] scores = new int[ori.length];
-		for (ItemDis mItem : ori) {
+		for (int i=0;i<validLength;i++){
+			ItemDis mItem=ori[i];
 			String mStr = mItem.item.category;
 			boolean find = false;
 			int index = 0; // position of mCat in category
@@ -425,9 +425,9 @@ public class BasicKNN implements KNN {
 			}
 		}
 		int maxIndex = findMaxIndex(scores);
-		if (-1 == maxIndex) // if there is a tie, return the closest item's
-							// label
-			return ori[0].item.category;
+		// if there is a tie, eliminate the last sample point (farthest) from consideration 		
+		if (-1 == maxIndex) 
+			return getCat(ori,validLength-1);
 		else
 			return category.get(maxIndex);
 	}
@@ -479,7 +479,6 @@ public class BasicKNN implements KNN {
 				labelList.add(mitem.category);
 		}
 		// String[] labelArray=labelList.toArray(new String[labelList.size()]);
-		Log.d("KNN", labelList.toString());
 		return labelList;
 	}
 
@@ -521,7 +520,6 @@ public class BasicKNN implements KNN {
 					}
 				}
 				this.trainingSet.remove(out);
-				Log.d("BasicKNN", "kick out: " + out.toString());
 			}
 		}
 		// after adding staged in, correct it wrong times
@@ -560,6 +558,31 @@ public class BasicKNN implements KNN {
 		}
 	}
 
+	/**
+	 * return hints for user for each classification
+	 * these hints are just a general guidelines of
+	 * what this KNN thinks may be correct results.
+	 * not accurate predication. but right now it's accurate enough for hints
+	 * 
+	 * @param num number of hints needs
+	 * @return an array of hints strings (each element is a category)
+	 */
+	public String[] getHints(int num){
+		System.out.println(this.sortedItemMap);
+		List<String> allHints=new ArrayList<String>();
+		int addedNum=0;
+		for (Map.Entry<Double, String> mEntry:this.sortedItemMap.entrySet()){
+			String oneHint=mEntry.getValue();
+			if ((!this.lastPredictedLabel.equals(oneHint)) && (!allHints.contains(oneHint))){
+				allHints.add(oneHint);
+				addedNum++;
+			}
+			if (addedNum == num)
+				break;
+		}
+		String[] hintsArray=allHints.toArray(new String[allHints.size()]);
+		return hintsArray;
+	}
 }
 
 /**
