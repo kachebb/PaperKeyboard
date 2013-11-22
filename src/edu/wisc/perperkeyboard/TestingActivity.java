@@ -10,10 +10,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -34,12 +30,10 @@ import edu.wisc.jj.Item;
 import edu.wisc.jj.SPUtil;
 
 
-public class TestingActivity extends Activity implements RecBufListener, SensorEventListener {
+public class TestingActivity extends Activity implements RecBufListener{
 	/*************constant values***********************/
 	private static final String LTAG = "testing activity debug";
 	private static final int STROKE_CHUNKSIZE = 2000;
-	private final float GYRO_TOUCHSCRREN_THRESHOLD=(float) 0.15; 
-	private final long TOUCHSCREEN_TIME_INTERVAL=400000000;//400ms 	
 	
 	/*************UI ********************************/
 	private TextView text;
@@ -75,12 +69,9 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 	/********************statistics**************************/
 	private int totalInputTimes = 0;
 	private int errorInputTimes = 0;	
-	/************gyro scope sensor*********************/
-	//UI thread update, recording thread check
-	private volatile long lastTouchScreenTime; // record the system time
-														// when touch screen is													// touched last time
-	private SensorManager mSensorManager;
-	private Sensor mGyro;
+	
+	/********************gyro helper**************************/
+	private GyroHelper mGyro;
 	
 	@SuppressLint("NewApi")
 	@Override
@@ -141,11 +132,10 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 		recordingThread.start();
 		text.requestFocus();
 		
-		//register gyro sensor
-	    mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-	    mGyro= mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-	    this.lastTouchScreenTime=System.nanoTime();
+		//get gyro helepr
+		this.mGyro=new GyroHelper(this.getApplicationContext());
 	}
+
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -177,10 +167,15 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 	 */
 	@SuppressLint("NewApi")
 	public void onRecBufFull(short[] data) {
-		//check if there is a screen touch nearby
+		/*********************check whether gyro agrees that there is a key stroke *******************/
 		long curTime=System.nanoTime();
-		if (Math.abs(curTime-this.lastTouchScreenTime) < this.TOUCHSCREEN_TIME_INTERVAL){
+		//first case: screen is being touched
+		if (Math.abs(curTime-this.mGyro.lastTouchScreenTime) < mGyro.TOUCHSCREEN_TIME_INTERVAL){
 			Log.d("onRecBufFull", "screen touch detected nearby");
+			return;
+		//2nd case: there is indeed some vibrations on the desk			
+		} else if (Math.abs(curTime-this.mGyro.lastTouchDeskTime) >= mGyro.DESK_TIME_INTERVAL){ 
+			Log.d("onRecBufFull", "no desk vibration feeled. not valid audio data. lastTouchDesktime: "+this.mGyro.lastTouchDeskTime + " .current time: "+curTime);
 			return;
 		}
 		
@@ -191,9 +186,6 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 			} else { // there is an stroke
 				// this whole stroke is inside current buffer
 				if (data.length - startIdx >= STROKE_CHUNKSIZE * 2) {
-					// Log.d(LTAG,
-					// "key stroke, data length > chuncksize, data length: " +
-					// data.length);
 					this.inStrokeMiddle = false;
 					this.strokeSamplesLeft = 0;
 					this.strokeBuffer = Arrays.copyOfRange(data, startIdx,
@@ -298,7 +290,7 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 						public void onClick(View v) {
 							// race condition, UI is updating KNN, need to make
 							// sure the background thread will not change mKNN
-							lastTouchScreenTime=System.nanoTime();														
+							mGyro.lastTouchScreenTime=System.nanoTime();														
 							mKNN.correctWrongDetection(((Button) v).getText()
 									.toString(),detectResult);
 							charas=charas.substring(0,charas.length()-1);
@@ -473,36 +465,23 @@ public class TestingActivity extends Activity implements RecBufListener, SensorE
 		
 	}
 	
-	//use sensors to detect whether user is touching screen
-	//touching screen may likely to cause an detection of key. Try to avoid such case
-	@Override
-	public void onAccuracyChanged(Sensor sensor, int accuracy) {
-		//do nothing on accuracy changed
-	}
-
-	@Override
-	public void onSensorChanged(SensorEvent event) {
-		//running on UI thread. double check
-		float[] values=event.values;
-//		Log.d(LTAG, "on sensor changed. time: "+System.nanoTime());
-		for (float value: values){
-			if (Math.abs(value) > this.GYRO_TOUCHSCRREN_THRESHOLD){
-//				Log.d(LTAG, "touch screen!!!!! "+value);				
-				this.lastTouchScreenTime=System.nanoTime();
-				break;
-			}
-		}
-	}
-	
 	@Override
 	  protected void onResume() {
 	    super.onResume();
-	    mSensorManager.registerListener(this, mGyro, SensorManager.SENSOR_DELAY_GAME);
+	    if (mGyro != null){
+	    	mGyro.register();
+	    } else {
+	    	Log.d(LTAG, "try to register gyro sensor. but there is no GyroHelper class used");
+	    }
 	  }
 
 	  @Override
 	  protected void onPause() {
 	    super.onPause();
-	    mSensorManager.unregisterListener(this);
+	    if (mGyro != null){
+	    	mGyro.unregister();
+	    } else {
+	    	Log.d(LTAG, "try to register gyro sensor. but there is no GyroHelper class used");
+	    }
 	  }	
 }
