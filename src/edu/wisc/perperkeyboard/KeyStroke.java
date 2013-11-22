@@ -1,7 +1,7 @@
 package edu.wisc.perperkeyboard;
 
 public class KeyStroke {
-	private static final int THRESHOLD = 3000;
+	private static final int THRESHOLD = 500;
 	private static final int CHUNKSIZE= 2000;
 	private static final int SAMPLERATE = 48000;
 	//private static final int DIST = 20000; //TODO modified

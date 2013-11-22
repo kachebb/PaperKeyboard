@@ -67,8 +67,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private boolean shift;
 	private boolean caps;
 	/********************statistics**************************/
-	private int totalInputTimes = 0;
-	private int errorInputTimes = 0;	
+	private Statistic stat;	
 	
 	/********************gyro helper**************************/
 	private GyroHelper mGyro;
@@ -131,6 +130,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		recordingThread = new Thread(mBuffer);
 		recordingThread.start();
 		text.requestFocus();
+		stat = new Statistic();
 		
 		//get gyro helepr
 		this.mGyro=new GyroHelper(this.getApplicationContext());
@@ -238,7 +238,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		// this.dealwithBackSpace(features);
 		// else Log.d(LTAG, "screen halts audioprocessing, we do nothing");
 		/**********statistic***************/
-		totalInputTimes++;
+		stat.addInput(false); //we suppose the input is correct
 		/**********caps and shift*******/
 		//set shift and caps condition
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K);
@@ -316,7 +316,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 							
 							Log.d("after correction: ", mKNN.toString());
 							
-							errorInputTimes++;
+							stat.addInput(true);
 							//Update UI;
 							updateUI();
 						}
@@ -450,8 +450,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 		texthint.setText("click Times:" + String.valueOf(clickTimes));
 		//text.setText(charas);
 		text.setText(showDetectResult.toString());
-		totalInputText.setText(String.valueOf(totalInputTimes));
-		errorInputText.setText(String.valueOf(errorInputTimes));
+		totalInputText.setText(String.valueOf(this.stat.totalInputTimes));
+		errorInputText.setText(String.valueOf(this.stat.totalErrorTimes));
 		if(shift){
 			//ShiftButton.animate();
 			ShiftButton.setChecked(true);
@@ -460,7 +460,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		if(caps){
 			CapsButton.setChecked(true);
 		}else CapsButton.setChecked(false);
-		errorInputText.setText(String.valueOf(errorInputTimes));
+		//errorInputText.setText(String.valueOf(errorInputTimes));
 		debugKNN.setText(mKNN.getChars());
 		
 	}
