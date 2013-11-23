@@ -336,55 +336,6 @@ public class TestingActivity extends Activity implements RecBufListener{
 		});
 	}
 
-	/**
-	 * This is just a function that is to make runAudioProcessing function more
-	 * clear It decides what to do according to backspace click time
-	 * 
-	 * @param features
-	 *            : features that are extracted by runAudiaoProcessing
-	 */
-	private void dealwithBackSpace(double[] features) {
-		String newKey;
-
-		if (clickTimes != 1) { // only one way to make click Time > 1, that is
-								// user click backSpace continuously
-			newKey = mKNN.classify(features, this.CLASSIFY_K);
-			mKNN.addTrainingItem(newKey, features);// online training
-			charas += newKey;
-			Log.d(LTAG, "clockTimes:0, charas: " + charas);
-			clickTimes = 0;
-		} else {
-			newKey = mKNN.classify(features, this.CLASSIFY_K);
-			if (newKey != previousKey) // we think this is user's input error
-			{
-				Item currentItem = new Item(features);
-				Item[] closest = mKNN.getClosestList();
-				// if distance is greater than a threshold, we choose the next
-				// closest
-				if (mKNN.findDistance(closest[0], currentItem) > mKNN.DISTTHRE) {
-					clickTimes = 0;
-					Log.d(LTAG, "clockTime:1 different form previous, charas: "
-							+ charas);
-				}
-				charas += newKey;
-			} else { // Newkey equals previous key, it might be our error,
-				// if dist(feature, newKey) > threshold, we choose next closest
-				// key as output
-				// get the nearest 2 nodes
-				mKNN.classify(features, this.CLASSIFY_K);
-				Item[] closest = mKNN.getClosestList();
-				newKey = closest[1].category;
-				charas += newKey;
-				Log.d(LTAG, "clockTime:1, same as previous, charas: " + charas);
-				clickOnceAndSame = true;// pass this value to deal with the
-										// condition that user want to click
-										// several times of backspace
-			}
-			// pass previous feature to next stage
-			this.previousKey = newKey;
-			this.previousFeature = features;
-		}
-	}
 
 	/***
 	 * This fuction is called when user click backspace button on screen It
