@@ -139,6 +139,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	 */
 	@Override
 	public void onRecBufFull(short[] data) {
+		Log.d(LTAG, "inside onRecBuf full");
 		if (!this.inStrokeMiddle) { // if not in the middle of a stroke
 			int startIdx = KeyStroke.detectStroke_threshold(data);
 			if (-1 == startIdx) { // when there is no stroke
@@ -161,12 +162,12 @@ public class MainActivity extends Activity implements RecBufListener{
 					this.strokeBuffer = new short[STROKE_CHUNKSIZE * 2];
 					System.arraycopy(data, startIdx, strokeBuffer, 0,
 							data.length - startIdx);
-//					Log.d(LTAG,
-//							"key stroke, data length < chuncksize, stroke start idx: "
-//									+ startIdx + " stroke data length: "
-//									+ String.valueOf(data.length - startIdx)
-//									+ " stroke samples left "
-//									+ this.strokeSamplesLeft);
+					Log.d(LTAG,
+							"key stroke, data length < chuncksize, stroke start idx: "
+									+ startIdx + " stroke data length: "
+									+ String.valueOf(data.length - startIdx)
+									+ " stroke samples left "
+									+ this.strokeSamplesLeft);
 				}
 			}
 		} else { // if in the middle of a stroke
@@ -180,19 +181,19 @@ public class MainActivity extends Activity implements RecBufListener{
 				// get the audio features from this stroke and add it to the
 				// training set, do it in background
 				this.runAudioProcessing();				
-//				Log.d(LTAG, "key stroke, data length >= samples left "
-//						+ " stroke data length: " + String.valueOf(data.length)
-//						+ " stroke samples left " + this.strokeSamplesLeft);
+				Log.d(LTAG, "key stroke, data length >= samples left "
+						+ " stroke data length: " + String.valueOf(data.length)
+						+ " stroke samples left " + this.strokeSamplesLeft);
 			} else { // if the length is smaller than the needed sample left
 				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
 						- 1 - strokeSamplesLeft, data.length);
 				this.inStrokeMiddle = true;
 				this.strokeSamplesLeft = this.strokeSamplesLeft - data.length;
-//				Log.d(LTAG,
-//						"key stroke, data length < samples left size " + " stroke data length: "
-//								+ String.valueOf(data.length)
-//								+ " stroke samples left "
-//								+ this.strokeSamplesLeft);
+				Log.d(LTAG,
+						"key stroke, data length < samples left size " + " stroke data length: "
+								+ String.valueOf(data.length)
+								+ " stroke samples left "
+								+ this.strokeSamplesLeft);
 			}
 		}
 	}

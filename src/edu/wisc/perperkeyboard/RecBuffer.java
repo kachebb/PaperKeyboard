@@ -35,24 +35,25 @@ public class RecBuffer implements Runnable {
 			p = Runtime.getRuntime().exec("/system/xbin/su");
 			this.os = new DataOutputStream(p.getOutputStream());
 			Log.d(LTAG, "Starts!");
-			SystemClock.sleep(100);
+			SystemClock.sleep(4000);
 
-			os.writeBytes("/system/bin/tinymix 27 120\n");
-			os.flush();
-			SystemClock.sleep(100);
-			os.writeBytes("/system/bin/tinymix 54 11\n");
-			os.flush();
-			SystemClock.sleep(100);
-			os.writeBytes("/system/bin/tinymix 55 12\n");
-			os.flush();
-			SystemClock.sleep(100);
-			os.writeBytes("/system/bin/tinymix 76 1\n");
-			os.flush();
-			SystemClock.sleep(100);
-			os.writeBytes("/system/bin/tinymix 77 1\n");
-			os.flush();
-			SystemClock.sleep(100);
+//			os.writeBytes("/system/bin/tinymix 27 120\n");
+//			os.flush();
+//			SystemClock.sleep(100);
+//			os.writeBytes("/system/bin/tinymix 54 11\n");
+//			os.flush();
+//			SystemClock.sleep(100);
+//			os.writeBytes("/system/bin/tinymix 55 12\n");
+//			os.flush();
+//			SystemClock.sleep(100);
+//			os.writeBytes("/system/bin/tinymix 76 1\n");
+//			os.flush();
+//			SystemClock.sleep(100);
+//			os.writeBytes("/system/bin/tinymix 77 1\n");
+//			os.flush();
+//			SystemClock.sleep(100);
 
+			
 			os.writeBytes("/system/xbin/killall tinycap\n");
 			os.flush();
 			SystemClock.sleep(500);
@@ -77,19 +78,24 @@ public class RecBuffer implements Runnable {
 			Log.d(LTAG, "Start tinycap!");
 
 			// infinite recording
-			os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 0 -d 1 -c 2 -r 48000 -b 16\n");
+			//changed for nexus 7
+			os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 1 -d 0 -c 2 -r 48000 -b 16\n");
 			os.flush();
+			SystemClock.sleep(100);
 			
 			read=buffer.length;
 			while (true) {
+				Log.d(LTAG, "try to read stdio tinycap" );									
 				reader.readFully(buffer);
+//				reader.read(buffer);				
+				Log.d(LTAG, "after read stdio of tinycap" );													
 				//copy data. if odd, then take the floor
 				short[] outData = new short[read/2];
 				// to turn bytes to shorts 
 				ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(outData);								
 				//call receiver
 				if (null != this.bufReceiver){
-//					Log.d(LTAG, "real time recorder called receiver. read : " + read);					
+					Log.d(LTAG, "real time recorder called receiver. read : " + read);					
 					this.bufReceiver.onRecBufFull(outData);
 				} else {
 					Log.d(LTAG, "no one is listening to me. I'm a sad real time recorder");
