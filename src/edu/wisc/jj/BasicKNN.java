@@ -34,11 +34,15 @@ public class BasicKNN implements KNN{
 	
 	//predicted label of last classification. helper for getHints
 	private String lastPredictedLabel;
+	//variances array used for standardizing euclidean distance
+	private double[] variances;
+
 	
 	public BasicKNN() {
 		this.trainingSet = Collections.synchronizedList(new ArrayList<Item>());
 	}
 
+	
 	/**
 	 * set the trainingSize for each Key
 	 * 
@@ -138,6 +142,9 @@ public class BasicKNN implements KNN{
 	public String classify(double[] testData, int k) {
 		// commit whatever in staging area into trainingset
 		this.commit();
+
+		//update variances array for calculating distance
+		this.updateVariances();
 		
 		//create new sortedItem map
 		this.sortedItemMap=new TreeMap<Double,String>();
@@ -189,6 +196,8 @@ public class BasicKNN implements KNN{
 		this.lastPredictedLabel=catResult;
 		return catResult;
 	}
+
+
 
 	/**
 	 * based on results, update the item's wrong times according to their label
@@ -349,17 +358,44 @@ public class BasicKNN implements KNN{
     }	
 
 	/**
-	 * find the distance between two items
+	 * update variance array for standardizing euclidean distance 
 	 */
-	public double findDistance(Item item1, Item item2) {
+	private void updateVariances() {
+		if (0 == this.trainingSet.size()){
+			System.out.println("No item in the training set");
+			return;
+		}
+		this.variances = new double[this.trainingSet.get(0).features.length];
+		//calculate variances for each dimension 
+		for (int i=0; i< this.variances.length;i++){
+			double sumSquare=0.0;
+			double sumMean=0.0;
+			for (int j=0; j< this.trainingSet.size();j++){
+				double value=this.trainingSet.get(j).features[i];
+				sumSquare+=value * value;
+				sumMean+=value;
+			}
+			sumMean=sumMean / (double)this.trainingSet.size();
+			sumSquare=sumSquare / (double)this.trainingSet.size();
+			this.variances[i] = sumSquare - sumMean * sumMean;
+		}
+	}
+
+    
+	/**
+	 * find the distance between two items
+	 * use standardized euclidean distance
+	 */
+	private double findDistance(Item item1, Item item2) {
 		if (item1.features.length != item2.features.length) {
 			System.out.println("training point has different features");
 			System.exit(1);
 		}
+		//use standardized euclidean distance
 		double result = 0.0;
 		for (int i = 0; i < item1.features.length; i++) {
-			result += (item1.features[i] - item2.features[i])
-					* (item1.features[i] - item2.features[i]);
+			double value = (item1.features[i] - item2.features[i]);
+			result += value*value  / this.variances[i] ;
 		}
 		result = Math.sqrt(result);
 		return result;

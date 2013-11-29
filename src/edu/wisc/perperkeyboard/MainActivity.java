@@ -63,6 +63,9 @@ public class MainActivity extends Activity implements RecBufListener{
 	//public int numToBeTrained;
 	public boolean finishedTraining;
 	private int TrainedNum = 0;  // for each key, how many key stroke we have collected
+	
+	/***********************gyro helper********************/
+	private GyroHelper mGyro;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -94,7 +97,9 @@ public class MainActivity extends Activity implements RecBufListener{
 						+ Arrays.toString(this.trainingItemName.toArray()));
 		Log.d(LTAG, "main activity thread id : "
 				+ Thread.currentThread().getId());
-
+		
+		//get gyro helper
+		this.mGyro=new GyroHelper(getApplicationContext());
 	}
 
 	@Override
@@ -139,7 +144,19 @@ public class MainActivity extends Activity implements RecBufListener{
 	 */
 	@Override
 	public void onRecBufFull(short[] data) {
-		Log.d(LTAG, "inside onRecBuf full");
+//		Log.d(LTAG, "inside onRecBuf full");
+		/*********************check whether gyro agrees that there is a key stroke *******************/
+		long curTime=System.nanoTime();
+		//first case: screen is being touched
+		if (Math.abs(curTime-this.mGyro.lastTouchScreenTime) < mGyro.TOUCHSCREEN_TIME_INTERVAL){
+			Log.d("onRecBufFull", "screen touch detected nearby");
+			return;
+		//2nd case: there is indeed some vibrations on the desk			
+		} else if (Math.abs(curTime-this.mGyro.lastTouchDeskTime) >= mGyro.DESK_TIME_INTERVAL){ 
+			Log.d("onRecBufFull", "no desk vibration feeled. not valid audio data. lastTouchDesktime: "+this.mGyro.lastTouchDeskTime + " .current time: "+curTime);
+			return;
+		}
+		
 		if (!this.inStrokeMiddle) { // if not in the middle of a stroke
 			int startIdx = KeyStroke.detectStroke_threshold(data);
 			if (-1 == startIdx) { // when there is no stroke
@@ -162,12 +179,12 @@ public class MainActivity extends Activity implements RecBufListener{
 					this.strokeBuffer = new short[STROKE_CHUNKSIZE * 2];
 					System.arraycopy(data, startIdx, strokeBuffer, 0,
 							data.length - startIdx);
-					Log.d(LTAG,
-							"key stroke, data length < chuncksize, stroke start idx: "
-									+ startIdx + " stroke data length: "
-									+ String.valueOf(data.length - startIdx)
-									+ " stroke samples left "
-									+ this.strokeSamplesLeft);
+//					Log.d(LTAG,
+//							"key stroke, data length < chuncksize, stroke start idx: "
+//									+ startIdx + " stroke data length: "
+//									+ String.valueOf(data.length - startIdx)
+//									+ " stroke samples left "
+//									+ this.strokeSamplesLeft);
 				}
 			}
 		} else { // if in the middle of a stroke
@@ -181,19 +198,19 @@ public class MainActivity extends Activity implements RecBufListener{
 				// get the audio features from this stroke and add it to the
 				// training set, do it in background
 				this.runAudioProcessing();				
-				Log.d(LTAG, "key stroke, data length >= samples left "
-						+ " stroke data length: " + String.valueOf(data.length)
-						+ " stroke samples left " + this.strokeSamplesLeft);
+//				Log.d(LTAG, "key stroke, data length >= samples left "
+//						+ " stroke data length: " + String.valueOf(data.length)
+//						+ " stroke samples left " + this.strokeSamplesLeft);
 			} else { // if the length is smaller than the needed sample left
 				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
 						- 1 - strokeSamplesLeft, data.length);
 				this.inStrokeMiddle = true;
 				this.strokeSamplesLeft = this.strokeSamplesLeft - data.length;
-				Log.d(LTAG,
-						"key stroke, data length < samples left size " + " stroke data length: "
-								+ String.valueOf(data.length)
-								+ " stroke samples left "
-								+ this.strokeSamplesLeft);
+//				Log.d(LTAG,
+//						"key stroke, data length < samples left size " + " stroke data length: "
+//								+ String.valueOf(data.length)
+//								+ " stroke samples left "
+//								+ this.strokeSamplesLeft);
 			}
 		}
 	}
@@ -356,6 +373,28 @@ public class MainActivity extends Activity implements RecBufListener{
 			}
 		});
 	}
+
+	/***************************start and stop gyro helper ****************************/
+	@Override
+	  protected void onResume() {
+	    super.onResume();
+	    if (mGyro != null){
+	    	mGyro.register();
+	    } else {
+	    	Log.d(LTAG, "try to register gyro sensor. but there is no GyroHelper class used");
+	    }
+	  }
+
+	  @Override
+	  protected void onPause() {
+	    super.onPause();
+	    if (mGyro != null){
+	    	mGyro.unregister();
+	    } else {
+	    	Log.d(LTAG, "try to register gyro sensor. but there is no GyroHelper class used");
+	    }
+	  }	
+	
 }
 
 /**
