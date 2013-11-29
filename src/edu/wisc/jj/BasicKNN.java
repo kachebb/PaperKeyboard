@@ -20,29 +20,28 @@ import java.util.TreeMap;
  * A kNN classification algorithm implementation.
  * 
  */
-public class BasicKNN implements KNN{
+public class BasicKNN implements KNN {
 	List<Item> trainingSet;
 	Item[] closestList;
 	public final int DISTTHRE = 1;
 	private int trainingSize = 5; // number of training samples to keep for each
 									// category. default 5
 	private Item staged;
-	//sorted item's categories given distance. updated each time when classify is called
-	//it is just used for hints instead of actual classification
-	//onlyclosestList will determine the result of classification
-	TreeMap<Double,String> sortedItemMap;
-	
-	//predicted label of last classification. helper for getHints
+	// sorted item's categories given distance. updated each time when classify
+	// is called
+	// it is just used for hints instead of actual classification
+	// onlyclosestList will determine the result of classification
+	TreeMap<Double, String> sortedItemMap;
+
+	// predicted label of last classification. helper for getHints
 	private String lastPredictedLabel;
-	//variances array used for standardizing euclidean distance
+	// variances array used for standardizing euclidean distance
 	private double[] variances;
 
-	
 	public BasicKNN() {
 		this.trainingSet = Collections.synchronizedList(new ArrayList<Item>());
 	}
 
-	
 	/**
 	 * set the trainingSize for each Key
 	 * 
@@ -143,12 +142,12 @@ public class BasicKNN implements KNN{
 		// commit whatever in staging area into trainingset
 		this.commit();
 
-		//update variances array for calculating distance
+		// update variances array for calculating distance
 		this.updateVariances();
-		
-		//create new sortedItem map
-		this.sortedItemMap=new TreeMap<Double,String>();
-		
+
+		// create new sortedItem map
+		this.sortedItemMap = new TreeMap<Double, String>();
+
 		// clear closest set
 		this.closestList = new Item[k];
 
@@ -169,17 +168,17 @@ public class BasicKNN implements KNN{
 		for (int i = 0; i < nns.length; i++) {
 			double distance = findDistance(tItem, this.trainingSet.get(i));
 			topBound = addItemToTop(this.trainingSet.get(i), nns, distance);
-			
-			//update sortedItemMap 
+
+			// update sortedItemMap
 			this.sortedItemMap.put(distance, this.trainingSet.get(i).category);
 		}
 		// find kNN in trainingData
 		for (int i = nns.length; i < this.trainingSet.size(); i++) {
 			Item rItem = this.trainingSet.get(i);
 			double distance = findDistance(tItem, rItem);
-			//update sortedItemMap 
+			// update sortedItemMap
 			this.sortedItemMap.put(distance, rItem.category);
-			
+
 			if (distance < topBound) {
 				// add to nns if the distance is smaller than the top bound,
 				// also update the topBound
@@ -187,17 +186,15 @@ public class BasicKNN implements KNN{
 			}
 		}
 		// get predicted category, save in KNNResult.categoryAssignment
-		catResult = getCat(nns,nns.length);
+		catResult = getCat(nns, nns.length);
 		for (int idx = 0; idx < nns.length; idx++) {
 			this.closestList[idx] = nns[idx].item;
 		}
 		updateWrongTimesAfterClassify(this.closestList, catResult);
-		//record label predicted
-		this.lastPredictedLabel=catResult;
+		// record label predicted
+		this.lastPredictedLabel = catResult;
 		return catResult;
 	}
-
-
 
 	/**
 	 * based on results, update the item's wrong times according to their label
@@ -344,58 +341,56 @@ public class BasicKNN implements KNN{
 			result.append(eachItem.toString());
 		return result.toString();
 	}
-	
-	
-	/**
-	 * return all the characters(label) in the KNN right now 
-	 * @return
-	 */
-    public String getChars(){
-        StringBuilder result =new StringBuilder();
-        for (Item eachItem: this.trainingSet)
-                result.append(eachItem.category);
-        return result.toString();
-    }	
 
 	/**
-	 * update variance array for standardizing euclidean distance 
+	 * return all the characters(label) in the KNN right now
+	 * 
+	 * @return
+	 */
+	public String getChars() {
+		StringBuilder result = new StringBuilder();
+		for (Item eachItem : this.trainingSet)
+			result.append(eachItem.category);
+		return result.toString();
+	}
+
+	/**
+	 * update variance array for standardizing euclidean distance
 	 */
 	private void updateVariances() {
-		if (0 == this.trainingSet.size()){
+		if (0 == this.trainingSet.size()) {
 			System.out.println("No item in the training set");
 			return;
 		}
 		this.variances = new double[this.trainingSet.get(0).features.length];
-		//calculate variances for each dimension 
-		for (int i=0; i< this.variances.length;i++){
-			double sumSquare=0.0;
-			double sumMean=0.0;
-			for (int j=0; j< this.trainingSet.size();j++){
-				double value=this.trainingSet.get(j).features[i];
-				sumSquare+=value * value;
-				sumMean+=value;
+		// calculate variances for each dimension
+		for (int i = 0; i < this.variances.length; i++) {
+			double sumSquare = 0.0;
+			double sumMean = 0.0;
+			for (int j = 0; j < this.trainingSet.size(); j++) {
+				double value = this.trainingSet.get(j).features[i];
+				sumSquare += value * value;
+				sumMean += value;
 			}
-			sumMean=sumMean / (double)this.trainingSet.size();
-			sumSquare=sumSquare / (double)this.trainingSet.size();
+			sumMean = sumMean / (double) this.trainingSet.size();
+			sumSquare = sumSquare / (double) this.trainingSet.size();
 			this.variances[i] = sumSquare - sumMean * sumMean;
 		}
 	}
 
-    
 	/**
-	 * find the distance between two items
-	 * use standardized euclidean distance
+	 * find the distance between two items use standardized euclidean distance
 	 */
 	private double findDistance(Item item1, Item item2) {
 		if (item1.features.length != item2.features.length) {
 			System.out.println("training point has different features");
 			System.exit(1);
 		}
-		//use standardized euclidean distance
+		// use standardized euclidean distance
 		double result = 0.0;
 		for (int i = 0; i < item1.features.length; i++) {
 			double value = (item1.features[i] - item2.features[i]);
-			result += value*value  / this.variances[i] ;
+			result += value * value / this.variances[i];
 		}
 		result = Math.sqrt(result);
 		return result;
@@ -433,17 +428,19 @@ public class BasicKNN implements KNN{
 
 	/**
 	 * get the majority category of the nns
-	 *
-	 * @param ori, the array to get categories from
-	 * @param validLength, valid length of item in that array
+	 * 
+	 * @param ori
+	 *            , the array to get categories from
+	 * @param validLength
+	 *            , valid length of item in that array
 	 * @return return the majority vote of the k nearest neighbors if no tie.
 	 *         Return the majority vote without the farthest point if tied.
 	 */
 	private String getCat(ItemDis[] ori, int validLength) {
 		List<String> category = new ArrayList<String>();
 		int[] scores = new int[ori.length];
-		for (int i=0;i<validLength;i++){
-			ItemDis mItem=ori[i];
+		for (int i = 0; i < validLength; i++) {
+			ItemDis mItem = ori[i];
 			String mStr = mItem.item.category;
 			boolean find = false;
 			int index = 0; // position of mCat in category
@@ -461,9 +458,10 @@ public class BasicKNN implements KNN{
 			}
 		}
 		int maxIndex = findMaxIndex(scores);
-		// if there is a tie, eliminate the last sample point (farthest) from consideration 		
-		if (-1 == maxIndex) 
-			return getCat(ori,validLength-1);
+		// if there is a tie, eliminate the last sample point (farthest) from
+		// consideration
+		if (-1 == maxIndex)
+			return getCat(ori, validLength - 1);
 		else
 			return category.get(maxIndex);
 	}
@@ -595,28 +593,63 @@ public class BasicKNN implements KNN{
 	}
 
 	/**
-	 * return hints for user for each classification
-	 * these hints are just a general guidelines of
-	 * what this KNN thinks may be correct results.
-	 * not accurate predication. but right now it's accurate enough for hints
+	 * return hints for user for each classification these hints are just a
+	 * general guidelines of what this KNN thinks may be correct results. not
+	 * accurate predication. but right now it's accurate enough for hints
 	 * 
-	 * @param num number of hints needs
+	 * @param num
+	 *            number of hints needs
 	 * @return an array of hints strings (each element is a category)
 	 */
-	public String[] getHints(int num){
+	public String[] getHints(int num) {
 		System.out.println(this.sortedItemMap);
-		List<String> allHints=new ArrayList<String>();
-		int addedNum=0;
-		for (Map.Entry<Double, String> mEntry:this.sortedItemMap.entrySet()){
-			String oneHint=mEntry.getValue();
-			if ((!this.lastPredictedLabel.equals(oneHint)) && (!allHints.contains(oneHint))){
+		List<String> allHints = new ArrayList<String>();
+		int addedNum = 0;
+		for (Map.Entry<Double, String> mEntry : this.sortedItemMap.entrySet()) {
+			String oneHint = mEntry.getValue();
+			if ((!this.lastPredictedLabel.equals(oneHint))
+					&& (!allHints.contains(oneHint))) {
 				allHints.add(oneHint);
 				addedNum++;
 			}
 			if (addedNum == num)
 				break;
 		}
-		String[] hintsArray=allHints.toArray(new String[allHints.size()]);
+		String[] hintsArray = allHints.toArray(new String[allHints.size()]);
+		return hintsArray;
+	}
+
+	/**
+	 * return hints for user for each classification these hints are just a
+	 * general guidelines of what this KNN thinks may be correct results. not
+	 * accurate predication. It also take the results coming from dictionary
+	 * into considerations Only when there is such a hint returned from
+	 * dictionary, such character is considered as a hint
+	 * 
+	 * @param num
+	 *            number of hints needs
+	 * @return an array of hints strings (each element is a category)
+	 */
+	public String[] getHints(int num, List<String> dictionaryResult) {
+		System.out.println(this.sortedItemMap);
+		List<String> allHints = new ArrayList<String>();
+		int addedNum = 0;
+		for (Map.Entry<Double, String> mEntry : this.sortedItemMap.entrySet()) {
+			String oneHint = mEntry.getValue();
+			if ((!this.lastPredictedLabel.equals(oneHint))
+					&& (!allHints.contains(oneHint))) {
+				if (dictionaryResult != null) { // when dictionary is useful
+					if (dictionaryResult.contains(oneHint))
+						allHints.add(oneHint);
+				} else {
+					allHints.add(oneHint);
+				}
+				addedNum++;
+			}
+			if (addedNum == num)
+				break;
+		}
+		String[] hintsArray = allHints.toArray(new String[allHints.size()]);
 		return hintsArray;
 	}
 }

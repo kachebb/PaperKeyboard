@@ -86,17 +86,17 @@ public class RecBuffer implements Runnable {
 			
 			read=buffer.length;
 			while (true) {
-				Log.d(LTAG, "try to read stdio tinycap" );									
+//				Log.d(LTAG, "try to read stdio tinycap" );									
 				reader.readFully(buffer);
 //				reader.read(buffer);				
-				Log.d(LTAG, "after read stdio of tinycap" );													
+//				Log.d(LTAG, "after read stdio of tinycap" );													
 				//copy data. if odd, then take the floor
 				short[] outData = new short[read/2];
 				// to turn bytes to shorts 
 				ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(outData);								
 				//call receiver
 				if (null != this.bufReceiver){
-					Log.d(LTAG, "real time recorder called receiver. read : " + read);					
+//					Log.d(LTAG, "real time recorder called receiver. read : " + read);					
 					this.bufReceiver.onRecBufFull(outData);
 				} else {
 					Log.d(LTAG, "no one is listening to me. I'm a sad real time recorder");

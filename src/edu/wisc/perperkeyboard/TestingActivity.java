@@ -72,6 +72,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 	
 	/********************gyro helper**************************/
 	private GyroHelper mGyro;
+
+	/********************dictionary**************************/
+	private Dictionary mDict;
+	private StringBuilder dictBase; //used to store the previous  
+	private static final String WORD_SPLITTER = "a";	
 	
 	@SuppressLint("NewApi")
 	@Override
@@ -132,8 +137,12 @@ public class TestingActivity extends Activity implements RecBufListener{
 		recordingThread.start();
 		text.requestFocus();
 		
-		//get gyro helepr
+		/********************gyro helper**************************/				
 		this.mGyro=new GyroHelper(this.getApplicationContext());
+		
+		/********************dictionary**************************/
+		//use dict_2of12inf in resource/raw folder
+		this.mDict=new Dictionary(getApplicationContext(), R.raw.dict_2of12inf);
 	}
 
 
@@ -175,7 +184,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 			return;
 		//2nd case: there is indeed some vibrations on the desk			
 		} else if (Math.abs(curTime-this.mGyro.lastTouchDeskTime) >= mGyro.DESK_TIME_INTERVAL){ 
-			Log.d("onRecBufFull", "no desk vibration feeled. not valid audio data. lastTouchDesktime: "+this.mGyro.lastTouchDeskTime + " .current time: "+curTime);
+//			Log.d("onRecBufFull", "no desk vibration feeled. not valid audio data. lastTouchDesktime: "+this.mGyro.lastTouchDeskTime + " .current time: "+curTime);
 			return;
 		}
 		
@@ -255,10 +264,24 @@ public class TestingActivity extends Activity implements RecBufListener{
 		//add unsure sample to staging area
 		mKNN.addToStage(detectResult, features);
 		
-		//get hints from KNN
-		//argument is the number of hints needed
-		final String[] labels = mKNN.getHints(4);
+		
+		//get hints from dictionary
+		String historyLower=charas.substring(0,(charas.length()-1 >0 )?charas.length()-1:0).toLowerCase();
+		Log.d(LTAG,"history lower :" +historyLower);
+		int splitterIndex=historyLower.lastIndexOf(WORD_SPLITTER.charAt(0));
+		int endIndex=(historyLower.length() >0)? historyLower.length():0;
+		Log.d(LTAG,"start index: "+(splitterIndex+1));		
+		Log.d(LTAG,"end index: "+endIndex);
+		String unfinishedWord="";
+		if ((splitterIndex+1) <=endIndex)
+			unfinishedWord=historyLower.substring(splitterIndex+1, endIndex);
+		Log.d(LTAG,"to dictionary:" +unfinishedWord);		
+		List<String> hintsFromDict=this.mDict.getPossibleChar(unfinishedWord);
 
+		//get hints from KNN with regarding to the dictionary result
+		//argument is the number of hints needed
+		final String[] labels = mKNN.getHints(5,hintsFromDict);
+		
 		// update UI
 		this.runOnUiThread(new Runnable() {
 			@SuppressLint("NewApi")
