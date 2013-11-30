@@ -265,7 +265,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		mKNN.addToStage(detectResult, features);
 		
 		
-		//get hints from dictionary
+		/*********get hints from dictionary*****************/
 		String historyLower=charas.substring(0,(charas.length()-1 >0 )?charas.length()-1:0).toLowerCase();
 		Log.d(LTAG,"history lower :" +historyLower);
 		int splitterIndex=historyLower.lastIndexOf(WORD_SPLITTER.charAt(0));
