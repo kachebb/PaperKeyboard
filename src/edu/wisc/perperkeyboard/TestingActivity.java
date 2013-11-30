@@ -1,8 +1,11 @@
 package edu.wisc.perperkeyboard;
 
 import java.io.FileNotFoundException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -43,9 +46,10 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private volatile static List<String> showDetectResult;
 	private TextView debugKNN;
 	private TextView totalInputText;
-	private TextView errorInputText;
+	private TextView totalAccuracyText;
 	private ToggleButton ShiftButton;
 	private ToggleButton CapsButton;
+	private TextView recentAccuracyText;
 	/*************Audio Processing*******************/
 	private BasicKNN mKNN;
 	private boolean inStrokeMiddle;
@@ -84,9 +88,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 		editText = (EditText) findViewById(R.id.inputChar);
 		debugKNN = (TextView) findViewById(R.id.text_debugKNN);
 		totalInputText = (TextView) findViewById(R.id.text_inputTimes);
-		errorInputText = (TextView) findViewById(R.id.text_errorTimes);
+		totalAccuracyText = (TextView) findViewById(R.id.text_errorTimes);
 		ShiftButton = (ToggleButton) findViewById(R.id.toggle_shift);
 		CapsButton = (ToggleButton) findViewById(R.id.toggle_caps);
+		recentAccuracyText = (TextView) findViewById(R.id.text_recentAccuracy);
+		
 		editText.setOnEditorActionListener(new OnEditorActionListener() {
 		    @Override
 		    public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
@@ -336,6 +342,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 		});
 	}
 
+	
+	
 	/**
 	 * This is just a function that is to make runAudioProcessing function more
 	 * clear It decides what to do according to backspace click time
@@ -415,6 +423,13 @@ public class TestingActivity extends Activity implements RecBufListener{
 	}
 
 	
+	public void onClickButtonFinish(View view){
+		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		Date date = new Date();
+		stat.doLogs("PaperKeyboard" );//+ dateFormat.format(date));
+		android.os.Process.killProcess(android.os.Process.myPid());
+	}
+	
 	/***
 	 * when ever new input is changed, use this function to decide which data to be add into the string
 	 * this function concerns the SHIFT and CAPSLOCK
@@ -451,7 +466,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		//text.setText(charas);
 		text.setText(showDetectResult.toString());
 		totalInputText.setText(String.valueOf(this.stat.totalInputTimes));
-		errorInputText.setText(String.valueOf(this.stat.totalErrorTimes));
+		totalAccuracyText.setText(String.valueOf(this.stat.totalAccuracy * 100) + "%");
 		if(shift){
 			//ShiftButton.animate();
 			ShiftButton.setChecked(true);
@@ -460,8 +475,9 @@ public class TestingActivity extends Activity implements RecBufListener{
 		if(caps){
 			CapsButton.setChecked(true);
 		}else CapsButton.setChecked(false);
-		//errorInputText.setText(String.valueOf(errorInputTimes));
+		//totalAccuracyText.setText(String.valueOf(errorInputTimes));
 		debugKNN.setText(mKNN.getChars());
+		recentAccuracyText.setText(String.valueOf(stat.recentAccuracy*100) + "%");
 		
 	}
 	

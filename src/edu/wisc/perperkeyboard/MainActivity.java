@@ -65,7 +65,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	private int TrainedNum = 0;  // for each key, how many key stroke we have collected
 	
 	/***********************gyro helper********************/
-	private GyroHelper mGyro;
+//	private GyroHelper mGyro;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -99,7 +99,7 @@ public class MainActivity extends Activity implements RecBufListener{
 				+ Thread.currentThread().getId());
 		
 		//get gyro helper
-		this.mGyro=new GyroHelper(getApplicationContext());
+		//this.mGyro=new GyroHelper(getApplicationContext());
 	}
 
 	@Override
@@ -147,6 +147,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		/*********************check whether gyro agrees that there is a key stroke *******************/
 		long curTime=System.nanoTime();
 		//first case: screen is being touched
+		/*
 		if (Math.abs(curTime-this.mGyro.lastTouchScreenTime) < mGyro.TOUCHSCREEN_TIME_INTERVAL){
 			Log.d("onRecBufFull", "screen touch detected nearby");
 			return;
@@ -155,7 +156,7 @@ public class MainActivity extends Activity implements RecBufListener{
 			Log.d("onRecBufFull", "no desk vibration feeled. not valid audio data. lastTouchDesktime: "+this.mGyro.lastTouchDeskTime + " .current time: "+curTime);
 			return;
 		}
-		
+		*/
 		if (!this.inStrokeMiddle) { // if not in the middle of a stroke
 			int startIdx = KeyStroke.detectStroke_threshold(data);
 			if (-1 == startIdx) { // when there is no stroke
@@ -359,7 +360,9 @@ public class MainActivity extends Activity implements RecBufListener{
 		});
 	}
 
+	
 	/***************************start and stop gyro helper ****************************/
+	/*
 	@Override
 	  protected void onResume() {
 	    super.onResume();
@@ -379,7 +382,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	    	Log.d(LTAG, "try to register gyro sensor. but there is no GyroHelper class used");
 	    }
 	  }	
-	
+	*/
 }
 
 /**

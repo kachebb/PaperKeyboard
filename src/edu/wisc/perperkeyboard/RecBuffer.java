@@ -20,7 +20,7 @@ public class RecBuffer implements Runnable {
 	private static final String LTAG = "jjTag";
 	DataOutputStream os; // the input for current run time
 	//this is in terms of bytes.
-	private static final int BUFSIZE = 48000 *2 * 2/10 * 2;
+	private static final int BUFSIZE = 48000 *2 * 1/20 * 2;
 	// the receiving thread
 	private RecBufListener bufReceiver; //assume only one receiver present in the system
 	
@@ -38,7 +38,7 @@ public class RecBuffer implements Runnable {
 			Log.d(LTAG, "Starts!");
 			SystemClock.sleep(100);
 
-			os.writeBytes("/system/bin/tinymix 27 120\n");
+			/*os.writeBytes("/system/bin/tinymix 27 120\n");
 			os.flush();
 			SystemClock.sleep(100);
 			os.writeBytes("/system/bin/tinymix 54 11\n");
@@ -53,7 +53,7 @@ public class RecBuffer implements Runnable {
 			os.writeBytes("/system/bin/tinymix 77 1\n");
 			os.flush();
 			SystemClock.sleep(100);
-
+			*/
 			os.writeBytes("/system/xbin/killall tinycap\n");
 			os.flush();
 			SystemClock.sleep(500);
@@ -78,7 +78,8 @@ public class RecBuffer implements Runnable {
 			Log.d(LTAG, "Start tinycap!");
 
 			// infinite recording
-			os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 0 -d 1 -c 2 -r 48000 -b 16\n");
+			//os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 0 -d 1 -c 2 -r 48000 -b 16\n");
+			os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 1 -d 0 -c 2 -r 48000 -b 16\n");
 			os.flush();
 			
 			read=buffer.length;

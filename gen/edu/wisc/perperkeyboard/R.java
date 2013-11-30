@@ -24,10 +24,11 @@ public final class R {
         public static final int ic_launcher=0x7f020000;
     }
     public static final class id {
-        public static final int action_settings=0x7f080010;
-        public static final int backSpace=0x7f08000f;
+        public static final int action_settings=0x7f080013;
+        public static final int backSpace=0x7f080010;
+        public static final int button_finish=0x7f080012;
         public static final int clearButton=0x7f080004;
-        public static final int inputChar=0x7f08000e;
+        public static final int inputChar=0x7f080011;
         public static final int mButton=0x7f080002;
         public static final int restartButton=0x7f080003;
         public static final int testActivity_layout=0x7f080005;
@@ -38,9 +39,11 @@ public final class R {
         public static final int text_errorTimes=0x7f08000b;
         public static final int text_inputHint=0x7f080008;
         public static final int text_inputTimes=0x7f080009;
+        public static final int text_recentAccuracy=0x7f08000d;
+        public static final int text_recentAccuracyHint=0x7f08000c;
         public static final int text_showhint=0x7f080001;
-        public static final int toggle_caps=0x7f08000d;
-        public static final int toggle_shift=0x7f08000c;
+        public static final int toggle_caps=0x7f08000f;
+        public static final int toggle_shift=0x7f08000e;
     }
     public static final class layout {
         public static final int activity_main=0x7f030000;
@@ -63,9 +66,11 @@ public final class R {
         public static final int detectionResult=0x7f050006;
         public static final int errorTimes=0x7f050010;
         public static final int errorTimes_hint=0x7f05000f;
+        public static final int finish=0x7f050014;
         public static final int hello_world=0x7f050002;
         public static final int inputTimes=0x7f05000e;
         public static final int inputTimes_hint=0x7f05000d;
+        public static final int recentAccuracy=0x7f050013;
         public static final int text_hint=0x7f050003;
         public static final int title_activity_testing=0x7f050005;
         public static final int togglecaps=0x7f050012;
