@@ -39,7 +39,7 @@ public interface KNN {
 	 * @return The object KNNResult contains classification category and an Item
 	 *         array of nearest neighbors
 	 */
-	public String classify(double[] testData, int k) ;
+	public String classify(double[] testData, int k, List<String> hints) ;
 	
 
 	/**

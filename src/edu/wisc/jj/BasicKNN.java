@@ -1,6 +1,5 @@
 package edu.wisc.jj;
 
-import android.annotation.SuppressLint;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -16,11 +15,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import android.annotation.SuppressLint;
+
 /**
  * A kNN classification algorithm implementation.
  * 
  */
-public class BasicKNN implements KNN {
+public class BasicKNN implements KNN{
 	List<Item> trainingSet;
 	Item[] closestList;
 	public final int DISTTHRE = 1;
@@ -128,17 +129,31 @@ public class BasicKNN implements KNN {
 		trainingSet.remove(trainingSet.size() - 1);
 	}
 
+
+	
 	/**
-	 * Classify one single test data. Return the top choices onto
+	 * 
+	 * Classify one single test data. Return the top choice.
+	 * 
+	 * if dictHints != null, then
+	 * Classify based on the dictionary hints that are given
+	 * if the majority vote of knn is not inside the dictHints, then we go for the next
+	 * highest votes in the k neighbors. If nothing in the k neighbors are inside the 
+	 * dictionary hints, then dictionary hints are ignored, the original majority vote 
+	 * is returned  
+	 * 
+	 * The policy above is implemented in "getCat" method
 	 * 
 	 * @param testData
 	 *            : 1-D array. Feature vector of such sample
 	 * @param k
 	 *            The number of neighbors to use for classification
+	 * @param dictHints
+	 * 		The hints given by dictionary
 	 * @return The object KNNResult contains classification category and an Item
 	 *         array of nearest neighbors
 	 */
-	public String classify(double[] testData, int k) {
+	public String classify(double[] testData, int k,List<String> dictHints) {
 		// commit whatever in staging area into trainingset
 		this.commit();
 
@@ -185,8 +200,7 @@ public class BasicKNN implements KNN {
 				topBound = addItemToTop(rItem, nns, distance);
 			}
 		}
-		// get predicted category, save in KNNResult.categoryAssignment
-		catResult = getCat(nns, nns.length);
+		catResult = getCat(nns,dictHints);
 		for (int idx = 0; idx < nns.length; idx++) {
 			this.closestList[idx] = nns[idx].item;
 		}
@@ -195,6 +209,8 @@ public class BasicKNN implements KNN {
 		this.lastPredictedLabel = catResult;
 		return catResult;
 	}
+
+
 
 	/**
 	 * based on results, update the item's wrong times according to their label
@@ -427,75 +443,142 @@ public class BasicKNN implements KNN {
 	}
 
 	/**
-	 * get the majority category of the nns
+	 * get the majority category of the nns while taking considerations of dictHints
+	 * 
+	 * sort the categories by majority vote. When tie appears, the category whose has a point
+	 * closer to the feature input is given priority
+	 * 
+	 * Return the highest ranked category that also appears in dictHints
+	 * If nothing in the knn category results is in dictHints, then the dictHints is ignored and 
+	 * teh highest ranked category by knn is returned
 	 * 
 	 * @param ori
 	 *            , the array to get categories from
-	 * @param validLength
-	 *            , valid length of item in that array
-	 * @return return the majority vote of the k nearest neighbors if no tie.
-	 *         Return the majority vote without the farthest point if tied.
+	 * @param dictHints
+	 * 	A list of string that are given by the dictionaries as hints. Should be the outpus of 
+	 * dictionary class "getPossibleChar" method 
 	 */
-	private String getCat(ItemDis[] ori, int validLength) {
-		List<String> category = new ArrayList<String>();
-		int[] scores = new int[ori.length];
-		for (int i = 0; i < validLength; i++) {
-			ItemDis mItem = ori[i];
-			String mStr = mItem.item.category;
-			boolean find = false;
-			int index = 0; // position of mCat in category
-			for (String mCat : category) {
-				if (mCat.equals(mStr)) {
-					scores[index]++;
-					find = true;
-				}
-				index++;
-			}
-			if (!find) {// if there is no such category in the list
-				// index is now pointing to the next available space
-				category.add(mStr);
-				scores[index] = 1;
+	private String getCat(ItemDis[] ori, List<String> dictHints) {
+		Map<String,Integer> votes=new HashMap<String, Integer>(); 
+		for (ItemDis mItem:ori){
+			if (votes.containsKey(mItem.item.category)){
+				//add 1 to the value if contains such key
+				int value = votes.get(mItem.item.category);
+				votes.put(mItem.item.category,value+1);
+			} else{ 
+				votes.put(mItem.item.category, 1);
 			}
 		}
-		int maxIndex = findMaxIndex(scores);
-		// if there is a tie, eliminate the last sample point (farthest) from
-		// consideration
-		if (-1 == maxIndex)
-			return getCat(ori, validLength - 1);
-		else
-			return category.get(maxIndex);
+		//sort the tree vote from high to low
+		TreeMap<Integer,List<String>> rankings= new TreeMap<Integer, List<String>>(Collections.reverseOrder());
+		for (Map.Entry<String, Integer> mEntry:votes.entrySet()){
+			List<String> categoryWithCertainVotes=rankings.get(mEntry.getValue());
+			if (null == categoryWithCertainVotes){ //no such value exists
+				List<String> categories=new ArrayList<String>();
+				categories.add(mEntry.getKey());
+				rankings.put(mEntry.getValue(), categories);
+			} else { 
+				//there is a tie situation, put the category with closest point in front
+				// i.e. if type a,b both have 2 votes, but a's closest point is closer than
+				// b's closest point, then a is given priority
+				categoryWithCertainVotes.add(mEntry.getKey());
+			}
+		}
+		//break ties in the map
+		for (Map.Entry<Integer,List<String>> mEntry : rankings.entrySet()){		
+			List<String> categoryWithCertainVotes=mEntry.getValue();
+			if (categoryWithCertainVotes.size()!=1){
+				List<String> tieBreaker=new ArrayList<String>();
+				//sort to break the tie
+				for (int i =0; i<ori.length;i++){
+					if (categoryWithCertainVotes.contains(ori[i].item.category) && !tieBreaker.contains(ori[i].item.category)){
+						tieBreaker.add(ori[i].item.category);
+					}
+				}
+				rankings.put(mEntry.getKey(), tieBreaker);
+			}
+		}
+		
+		//convert Map to List
+		List<String> resultFromMajorityVote=new ArrayList<String>();
+		for (Map.Entry<Integer,List<String>> mEntry : rankings.entrySet()){
+			resultFromMajorityVote.addAll(mEntry.getValue());
+		}
+		//take consideration of dictHints
+		for (String potentialCategory:resultFromMajorityVote){
+			if (null!=dictHints && dictHints.contains(potentialCategory))
+				return potentialCategory;
+		}
+		//if nothing in the output of knn matches dictHints, then ignore the dictHints
+		return resultFromMajorityVote.get(0);
+		
+//		List<String> resultCategory=new ArrayList<String>();
+//		for (ItemDis mItem:ori){
+//			if (!resultCategory.contains(mItem.item.category)){
+//				
+//			}
+//		}
+//			
+//		
+//		List<String> category = new ArrayList<String>();
+//		int[] scores = new int[ori.length];
+//		for (int i = 0; i < validLength; i++) {
+//			ItemDis mItem = ori[i];
+//			String mStr = mItem.item.category;
+//			boolean find = false;
+//			int index = 0; // position of mCat in category
+//			for (String mCat : category) {
+//				if (mCat.equals(mStr)) {
+//					scores[index]++;
+//					find = true;
+//				}
+//				index++;
+//			}
+//			if (!find) {// if there is no such category in the list
+//				// index is now pointing to the next available space
+//				category.add(mStr);
+//				scores[index] = 1;
+//			}
+//		}
+//		int maxIndex = findMaxIndex(scores);
+//		// if there is a tie, eliminate the last sample point (farthest) from
+//		// consideration
+//		if (-1 == maxIndex)
+//			return getCat(ori, validLength - 1);
+//		else
+//			return category.get(maxIndex);
 	}
 
-	/**
-	 * find the index of the maximum in the array scores If there is a tie,
-	 * return -1
-	 * 
-	 * @param scores
-	 * @return
-	 */
-	private int findMaxIndex(int[] scores) {
-		int resultIndex = 0;
-		int max = scores[0];
-		for (int index = 1; index < scores.length; index++) {
-			if (scores[index] > max) {
-				resultIndex = index;
-				max = scores[index];
-			}
-		}
-		boolean tie = false;
-		// search for the tie
-		for (int index = 0; index < scores.length; index++) {
-			if (max == scores[index] && resultIndex != index) // when there is
-																// another
-																// element that
-																// is the same
-																// as max
-				tie = true;
-		}
-		if (tie)
-			resultIndex = -1;
-		return resultIndex;
-	}
+//	/**
+//	 * find the index of the maximum in the array scores If there is a tie,
+//	 * return -1
+//	 * 
+//	 * @param scores
+//	 * @return
+//	 */
+//	private int findMaxIndex(int[] scores) {
+//		int resultIndex = 0;
+//		int max = scores[0];
+//		for (int index = 1; index < scores.length; index++) {
+//			if (scores[index] > max) {
+//				resultIndex = index;
+//				max = scores[index];
+//			}
+//		}
+//		boolean tie = false;
+//		// search for the tie
+//		for (int index = 0; index < scores.length; index++) {
+//			if (max == scores[index] && resultIndex != index) // when there is
+//																// another
+//																// element that
+//																// is the same
+//																// as max
+//				tie = true;
+//		}
+//		if (tie)
+//			resultIndex = -1;
+//		return resultIndex;
+//	}
 
 	/**
 	 * return the labels array from Item arrays the returned array of labels are
@@ -505,7 +588,6 @@ public class BasicKNN implements KNN {
 	 *            ： usually is the array returned by getClosestList
 	 * @return
 	 */
-	@Override
 	public List<String> getLabelsFromItems(Item[] nearItems) {
 		List<String> labelList = new ArrayList<String>();
 		for (Item mitem : nearItems) {
@@ -623,34 +705,38 @@ public class BasicKNN implements KNN {
 	 * return hints for user for each classification these hints are just a
 	 * general guidelines of what this KNN thinks may be correct results. not
 	 * accurate predication. It also take the results coming from dictionary
-	 * into considerations Only when there is such a hint returned from
+	 * into considerations. Only when there is a same hint returned from
 	 * dictionary, such character is considered as a hint
 	 * 
 	 * @param num
 	 *            number of hints needs
 	 * @return an array of hints strings (each element is a category)
 	 */
-	public String[] getHints(int num, List<String> dictionaryResult) {
-		System.out.println(this.sortedItemMap);
+	public List<String> getHints(int num, List<String> dictionaryResult) {
+//		System.out.println(this.sortedItemMap);
 		List<String> allHints = new ArrayList<String>();
 		int addedNum = 0;
+		// whether dictionary is useful		
+		boolean useDict=(dictionaryResult != null )&& (!dictionaryResult.isEmpty());
 		for (Map.Entry<Double, String> mEntry : this.sortedItemMap.entrySet()) {
 			String oneHint = mEntry.getValue();
 			if ((!this.lastPredictedLabel.equals(oneHint))
 					&& (!allHints.contains(oneHint))) {
-				if (dictionaryResult != null) { // when dictionary is useful
-					if (dictionaryResult.contains(oneHint))
+				if (useDict){
+					if (dictionaryResult.contains(oneHint)){
 						allHints.add(oneHint);
+						addedNum++;					
+					}
 				} else {
 					allHints.add(oneHint);
+					addedNum++;										
 				}
-				addedNum++;
 			}
 			if (addedNum == num)
 				break;
 		}
-		String[] hintsArray = allHints.toArray(new String[allHints.size()]);
-		return hintsArray;
+//		String[] hintsArray = allHints.toArray(new String[allHints.size()]);
+		return allHints;
 	}
 }
 

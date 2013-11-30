@@ -75,8 +75,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 
 	/********************dictionary**************************/
 	private Dictionary mDict;
-	private StringBuilder dictBase; //used to store the previous  
-	private static final String WORD_SPLITTER = "a";	
+	//use WORD_SPLITTER to separate words from words
+	private static final String WORD_SPLITTER = " ";	
 	
 	@SuppressLint("NewApi")
 	@Override
@@ -248,25 +248,9 @@ public class TestingActivity extends Activity implements RecBufListener{
 		// else Log.d(LTAG, "screen halts audioprocessing, we do nothing");
 		/**********statistic***************/
 		totalInputTimes++;
-		/**********caps and shift*******/
-		//set shift and caps condition
-		final String detectResult = mKNN.classify(features, this.CLASSIFY_K);
-		//decide which character to show
-		this.updateData(detectResult);
-		
-		this.shift = false; //clear shift after use
-		if(detectResult.equals("LShift") || detectResult.equals("RShift")){
-			this.shift = true;
-		}
-		if(detectResult.equals("Caps")){
-			this.caps = !this.caps;
-		}
-		//add unsure sample to staging area
-		mKNN.addToStage(detectResult, features);
-		
 		
 		/*********get hints from dictionary*****************/
-		String historyLower=charas.substring(0,(charas.length()-1 >0 )?charas.length()-1:0).toLowerCase();
+		String historyLower=charas.toLowerCase();
 		Log.d(LTAG,"history lower :" +historyLower);
 		int splitterIndex=historyLower.lastIndexOf(WORD_SPLITTER.charAt(0));
 		int endIndex=(historyLower.length() >0)? historyLower.length():0;
@@ -277,10 +261,29 @@ public class TestingActivity extends Activity implements RecBufListener{
 			unfinishedWord=historyLower.substring(splitterIndex+1, endIndex);
 		Log.d(LTAG,"to dictionary:" +unfinishedWord);		
 		List<String> hintsFromDict=this.mDict.getPossibleChar(unfinishedWord);
-
+		
+		/********** detect using KNN *******/		
+		final String detectResult = mKNN.classify(features, this.CLASSIFY_K,hintsFromDict);
+		//decide which character to show
+		this.updateData(detectResult);
+		
+		/**********caps and shift*******/
+		//set shift and caps condition
+		this.shift = false; //clear shift after use
+		if(detectResult.equals("LShift") || detectResult.equals("RShift")){
+			this.shift = true;
+		}
+		if(detectResult.equals("Caps")){
+			this.caps = !this.caps;
+		}
+		//add unsure sample to staging area
+		mKNN.addToStage(detectResult, features);
+		
 		//get hints from KNN with regarding to the dictionary result
 		//argument is the number of hints needed
-		final String[] labels = mKNN.getHints(5,hintsFromDict);
+		final List<String> labels = mKNN.getHints(5,hintsFromDict);
+		//always show word_splitter as a hint
+		labels.add(WORD_SPLITTER);
 		
 		// update UI
 		this.runOnUiThread(new Runnable() {
@@ -303,10 +306,10 @@ public class TestingActivity extends Activity implements RecBufListener{
 					hintButtonList.clear();
 				}
 				// create new hint buttons
-				for (int i = 0; i < labels.length; i++) {
+				for (int i = 0; i < labels.size(); i++) {
 					Button myButton = new Button(getApplicationContext());
 					hintButtonList.add(myButton);
-					myButton.setText(labels[i]);
+					myButton.setText(labels.get(i));
 					myButton.setId(100 + i);
 					myButton.setOnClickListener(new OnClickListener() {
 						@Override
