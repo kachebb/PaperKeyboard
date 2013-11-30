@@ -16,9 +16,12 @@
 	<string name = "debugKNN">show KNN</string>
 	<string name = "inputTimes_hint">Total input</string>
 	<string name = "inputTimes">input times</string>
-	<string name = "errorTimes_hint">Error input</string>
-	<string name = "errorTimes">input times</string>
+	<string name = "errorTimes_hint">Total Accuracy</string>
+	<string name = "errorTimes">accuracy</string>
 	<string name = "toggleshift">SHIFT</string>
-		<string name = "togglecaps">CAPS</string>
-
+	<string name = "togglecaps">CAPS</string>
+	<string name = "recentAccuracy">recent accuracy</string>
+	<string name = "finish">finish</string>
+	<string name = "button_Dict">use Dict</string>
+	
 </resources>
