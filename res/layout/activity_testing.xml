@@ -76,21 +76,40 @@
       	 android:layout_below="@id/text_errorHint"
          android:hint = "@string/errorTimes" />
        
+       <TextView
+         android:id="@+id/text_recentAccuracyHint"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         android:layout_alignParentRight="true"
+      	 android:layout_below="@id/text_errorTimes"
+         android:hint = "@string/recentAccuracy" 
+         android:textStyle="bold" />
+       
+       <TextView
+         android:id="@+id/text_recentAccuracy"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         android:layout_alignParentRight="true"
+      	 android:layout_below="@id/text_recentAccuracyHint"
+         android:hint = "@string/recentAccuracy"  />
+       
        <ToggleButton
            android:id="@+id/toggle_shift"
            android:layout_width="wrap_content"
-           android:layout_height="wrap_content"
+           android:layout_height="20dp"
            android:layout_alignRight="@+id/text_errorTimes"
-           android:layout_below="@id/text_errorTimes"
+           android:layout_below="@id/text_recentAccuracy"
+           android:layout_above ="@+id/toggle_caps"
            android:textOff="@android:string/no"
            android:textOn="@string/toggleshift" />
        
        <ToggleButton
            android:id="@+id/toggle_caps"
            android:layout_width="wrap_content"
-           android:layout_height="wrap_content"
+           android:layout_height="30dp"
            android:layout_alignRight="@+id/text_errorTimes"
-           android:layout_below="@id/toggle_shift"
+           android:layout_above="@+id/backSpace"
+          
            android:textOff="@android:string/no"
            android:textOn="@string/togglecaps" />
        
@@ -109,17 +128,39 @@
          android:textStyle="bold" >
      </EditText>
      
+     <Button
+	    android:id="@+id/button_Dict"
+	    android:layout_toRightOf="@id/inputChar"
+	    android:layout_toLeftOf="@+id/backSpace"
+        android:layout_width="wrap_content"
+        android:layout_height = "wrap_content"
+        android:layout_gravity = "center"
+        android:layout_alignParentBottom="true" 
+        android:text="@string/button_Dict" 
+     	android:onClick="onClickDict"
+        />
      
      <Button
 	    android:id="@+id/backSpace"
-	    android:layout_toRightOf="@id/inputChar"
-        android:layout_width="40dp"
+	 
+	    android:layout_toLeftOf="@+id/button_finish"
+        android:layout_width="wrap_content"
+        android:layout_height = "wrap_content"
+        android:layout_gravity = "center"
+        android:layout_alignParentBottom="true" 
+        android:text="@string/backSpace" 
+     	android:onClick="onClickButtonBackSpace"
+        />
+     
+     <Button
+	    android:id="@+id/button_finish"
+        android:layout_width="wrap_content"
         android:layout_height = "wrap_content"
         android:layout_gravity = "center"
         android:layout_alignParentRight="true"
         android:layout_alignParentBottom="true" 
-        android:text="@string/backSpace" 
-     	android:onClick="onClickButtonBackSpace"
+        android:text="@string/finish" 
+     	android:onClick="onClickButtonFinish"
         />
 
      

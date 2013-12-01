@@ -1,8 +1,11 @@
 package edu.wisc.perperkeyboard;
 
 import java.io.FileNotFoundException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -43,9 +46,10 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private volatile static List<String> showDetectResult;
 	private TextView debugKNN;
 	private TextView totalInputText;
-	private TextView errorInputText;
+	private TextView totalAccuracyText;
 	private ToggleButton ShiftButton;
 	private ToggleButton CapsButton;
+	private TextView recentAccuracyText;
 	/*************Audio Processing*******************/
 	private BasicKNN mKNN;
 	private boolean inStrokeMiddle;
@@ -56,19 +60,18 @@ public class TestingActivity extends Activity implements RecBufListener{
 
 	/************self-correction and online training control**************/
 	private int clickTimes = 0;
-	private boolean onlineTraining = true;
+//	private boolean onlineTraining = true;
 	private String previousKey = "";
 	private boolean halt = false;
 	private boolean clickOnceAndSame = false;
-	private double[] previousFeature;
 	private int CLASSIFY_K = 3;
 	private volatile List<Button> hintButtonList;
+	
 	/********************Shift and caps*****************************/
 	private boolean shift;
 	private boolean caps;
 	/********************statistics**************************/
-	private int totalInputTimes = 0;
-	private int errorInputTimes = 0;	
+	private Statistic stat;	
 	
 	/********************gyro helper**************************/
 	private GyroHelper mGyro;
@@ -76,7 +79,10 @@ public class TestingActivity extends Activity implements RecBufListener{
 	/********************dictionary**************************/
 	private Dictionary mDict;
 	//use WORD_SPLITTER to separate words from words
-	private static final String WORD_SPLITTER = " ";	
+	//should be " ". right now for training simplicity, used an arbitrary character
+	private static final String WORD_SPLITTER = "a";	
+	private boolean dictStatus = true;
+
 	
 	@SuppressLint("NewApi")
 	@Override
@@ -90,26 +96,32 @@ public class TestingActivity extends Activity implements RecBufListener{
 		editText = (EditText) findViewById(R.id.inputChar);
 		debugKNN = (TextView) findViewById(R.id.text_debugKNN);
 		totalInputText = (TextView) findViewById(R.id.text_inputTimes);
-		errorInputText = (TextView) findViewById(R.id.text_errorTimes);
+		totalAccuracyText = (TextView) findViewById(R.id.text_errorTimes);
 		ShiftButton = (ToggleButton) findViewById(R.id.toggle_shift);
 		CapsButton = (ToggleButton) findViewById(R.id.toggle_caps);
+		recentAccuracyText = (TextView) findViewById(R.id.text_recentAccuracy);
+	
+		editText.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+		    	halt = true;
+		    }
+		});
 		editText.setOnEditorActionListener(new OnEditorActionListener() {
 		    @Override
 		    public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
 		        boolean handled = false;
-		     
+		        //halt = true;
 		        if (actionId == EditorInfo.IME_ACTION_SEND) {
-		           // text.setText(v.getText());
-		        	showDetectResult.add(v.getText().toString());
-		        	charas += v.getText().toString();
-		        	//if training set is full, we need to the most far point
-		        	mKNN.addTrainingItem(v.getText().toString(), previousFeature);
-		        	//text.setText(charas);
-		        	text.setText(showDetectResult.toString());
-		        	debugKNN.setText(mKNN.getChars());
-		        	clickTimes = 0;
+		    
+		        	mKNN.correctWrongDetection( v.getText()
+							.toString(),previousKey);
+					charas=charas.substring(0,charas.length()-1);
+					showDetectResult.remove(showDetectResult.size()-1);
+					//update output according to shift and caps
+					updateData(v.getText().toString());
 		        	halt = false;
-		        	clickOnceAndSame = false;
+		        	updateUI();
 		            handled = true;
 		        }
 		        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -127,6 +139,9 @@ public class TestingActivity extends Activity implements RecBufListener{
 		text.setText("Training Size:"+String.valueOf(mKNN.getTrainingSize()));
 		debugKNN.setText(mKNN.getChars());
 		showDetectResult = new ArrayList<String>();
+		dictStatus = true;
+		
+		
 		/****************Init RecBuffer and thread*****************/
 		mBuffer = new RecBuffer();
 		recordingThread = new Thread(mBuffer);
@@ -136,6 +151,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		recordingThread = new Thread(mBuffer);
 		recordingThread.start();
 		text.requestFocus();
+		stat = new Statistic();
 		
 		/********************gyro helper**************************/				
 		this.mGyro=new GyroHelper(this.getApplicationContext());
@@ -199,7 +215,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 					this.strokeSamplesLeft = 0;
 					this.strokeBuffer = Arrays.copyOfRange(data, startIdx,
 							startIdx + STROKE_CHUNKSIZE * 2);
-					this.runAudioProcessing();
+					if(!halt)
+						this.runAudioProcessing();
 				} else { // there are some samples left in the next buffer
 					this.inStrokeMiddle = true;
 					this.strokeSamplesLeft = STROKE_CHUNKSIZE * 2
@@ -219,7 +236,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 						STROKE_CHUNKSIZE * 2);
 				// get the audio features from this stroke and add it to the
 				// training set, do it in background
-				this.runAudioProcessing();
+				if(!halt)
+					this.runAudioProcessing();
 			} else { // if the length is smaller than the needed sample left
 				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
 						- 1 - strokeSamplesLeft, data.length);
@@ -240,32 +258,38 @@ public class TestingActivity extends Activity implements RecBufListener{
 		short[][] audioStrokeData = KeyStroke.seperateChannels(audioStroke);
 		this.strokeBuffer = null;
 		// get features
-		double[] features = SPUtil.getAudioFeatures(audioStrokeData);
+		double[] features= SPUtil.getAudioFeatures(audioStrokeData);
 		// if not halt by user input by screen keyboard, continue catching and
 		// showing data-- jj. not using complex online learning right now
 		// if(!halt)
 		// this.dealwithBackSpace(features);
 		// else Log.d(LTAG, "screen halts audioprocessing, we do nothing");
+		
 		/**********statistic***************/
-		totalInputTimes++;
+		stat.addInput(false); //we suppose the input is correct		
+
 		
 		/*********get hints from dictionary*****************/
-		String historyLower=charas.toLowerCase();
-		Log.d(LTAG,"history lower :" +historyLower);
-		int splitterIndex=historyLower.lastIndexOf(WORD_SPLITTER.charAt(0));
-		int endIndex=(historyLower.length() >0)? historyLower.length():0;
-		Log.d(LTAG,"start index: "+(splitterIndex+1));		
-		Log.d(LTAG,"end index: "+endIndex);
-		String unfinishedWord="";
-		if ((splitterIndex+1) <=endIndex)
-			unfinishedWord=historyLower.substring(splitterIndex+1, endIndex);
-		Log.d(LTAG,"to dictionary:" +unfinishedWord);		
-		List<String> hintsFromDict=this.mDict.getPossibleChar(unfinishedWord);
+		List<String> hintsFromDict=null;
+		if (this.dictStatus){
+			String historyLower=charas.toLowerCase();
+			Log.d(LTAG,"history lower :" +historyLower);
+			int splitterIndex=historyLower.lastIndexOf(WORD_SPLITTER.charAt(0));
+			int endIndex=(historyLower.length() >0)? historyLower.length():0;
+			Log.d(LTAG,"start index: "+(splitterIndex+1));		
+			Log.d(LTAG,"end index: "+endIndex);
+			String unfinishedWord="";
+			if ((splitterIndex+1) <=endIndex)
+				unfinishedWord=historyLower.substring(splitterIndex+1, endIndex);
+			Log.d(LTAG,"to dictionary:" +unfinishedWord);		
+			hintsFromDict=this.mDict.getPossibleChar(unfinishedWord);
+		}
 		
 		/********** detect using KNN *******/		
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K,hintsFromDict);
-		//decide which character to show
-		this.updateData(detectResult);
+		this.previousKey =  detectResult;		
+		//add unsure sample to staging area
+		mKNN.addToStage(detectResult, features);
 		
 		/**********caps and shift*******/
 		//set shift and caps condition
@@ -276,8 +300,6 @@ public class TestingActivity extends Activity implements RecBufListener{
 		if(detectResult.equals("Caps")){
 			this.caps = !this.caps;
 		}
-		//add unsure sample to staging area
-		mKNN.addToStage(detectResult, features);
 		
 		//get hints from KNN with regarding to the dictionary result
 		//argument is the number of hints needed
@@ -285,7 +307,10 @@ public class TestingActivity extends Activity implements RecBufListener{
 		//always show word_splitter as a hint
 		labels.add(WORD_SPLITTER);
 		
-		// update UI
+		/************* update UI ********************/
+		//decide which character to show
+		this.updateData(detectResult);
+		
 		this.runOnUiThread(new Runnable() {
 			@SuppressLint("NewApi")
 			@Override
@@ -342,7 +367,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 							
 							Log.d("after correction: ", mKNN.toString());
 							
-							errorInputTimes++;
+							stat.addInput(true);
 							//Update UI;
 							updateUI();
 						}
@@ -362,13 +387,66 @@ public class TestingActivity extends Activity implements RecBufListener{
 		});
 	}
 
+	
+	
+	
+	/**
+	 * This is just a function that is to make runAudioProcessing function more
+	 * clear It decides what to do according to backspace click time
+	 * 
+	 * @param features
+	 *            : features that are extracted by runAudiaoProcessing
+	 */
+	/*
+	private void dealwithBackSpace(double[] features) {
+		String newKey;
+
+		if (clickTimes != 1) { // only one way to make click Time > 1, that is
+								// user click backSpace continuously
+			newKey = mKNN.classify(features, this.CLASSIFY_K);
+			mKNN.addTrainingItem(newKey, features);// online training
+			charas += newKey;
+			Log.d(LTAG, "clockTimes:0, charas: " + charas);
+			clickTimes = 0;
+		} else {
+			newKey = mKNN.classify(features, this.CLASSIFY_K);
+			if (newKey != previousKey) // we think this is user's input error
+			{
+				Item currentItem = new Item(features);
+				Item[] closest = mKNN.getClosestList();
+				// if distance is greater than a threshold, we choose the next
+				// closest
+				if (mKNN.findDistance(closest[0], currentItem) > mKNN.DISTTHRE) {
+					clickTimes = 0;
+					Log.d(LTAG, "clockTime:1 different form previous, charas: "
+							+ charas);
+				}
+				charas += newKey;
+			} else { // Newkey equals previous key, it might be our error,
+				// if dist(feature, newKey) > threshold, we choose next closest
+				// key as output
+				// get the nearest 2 nodes
+				mKNN.classify(features, this.CLASSIFY_K);
+				Item[] closest = mKNN.getClosestList();
+				newKey = closest[1].category;
+				charas += newKey;
+				Log.d(LTAG, "clockTime:1, same as previous, charas: " + charas);
+				clickOnceAndSame = true;// pass this value to deal with the
+										// condition that user want to click
+										// several times of backspace
+			}
+			// pass previous feature to next stage
+			this.previousKey = newKey;
+			this.previousFeature = features;
+		}
+	}
+*/
 
 	/***
 	 * This fuction is called when user click backspace button on screen It
 	 * remove one character from the displayed characters if it is user click
 	 * backspace input and then click backspace, we regard this as
 	 */
-
 	public void onClickButtonBackSpace(View view) {
 		int len = charas.length();
 		if(len > 0)
@@ -391,6 +469,27 @@ public class TestingActivity extends Activity implements RecBufListener{
 		}
 	}
 
+	/**
+	 * finish testing, save logs to file
+	 * @param view
+	 */
+	public void onClickButtonFinish(View view){
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss");
+		Date date = new Date();
+		
+		stat.doLogs("PaperKeyboard"+ dateFormat.format(date));
+		android.os.Process.killProcess(android.os.Process.myPid());
+	}
+	
+	public void onClickDict(View view){
+		this.dictStatus = !this.dictStatus;
+		Button button = (Button) findViewById(R.id.button_Dict);
+		if(dictStatus)
+			button.setText("Use-Dict");
+		else
+			button.setText("Non-Dict");
+			
+	}
 	
 	/***
 	 * when ever new input is changed, use this function to decide which data to be add into the string
@@ -427,8 +526,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 		texthint.setText("click Times:" + String.valueOf(clickTimes));
 		//text.setText(charas);
 		text.setText(showDetectResult.toString());
-		totalInputText.setText(String.valueOf(totalInputTimes));
-		errorInputText.setText(String.valueOf(errorInputTimes));
+		totalInputText.setText(String.valueOf(this.stat.totalInputTimes));
+		totalAccuracyText.setText(String.valueOf(this.stat.totalAccuracy * 100) + "%");
 		if(shift){
 			//ShiftButton.animate();
 			ShiftButton.setChecked(true);
@@ -437,8 +536,9 @@ public class TestingActivity extends Activity implements RecBufListener{
 		if(caps){
 			CapsButton.setChecked(true);
 		}else CapsButton.setChecked(false);
-		errorInputText.setText(String.valueOf(errorInputTimes));
+		//totalAccuracyText.setText(String.valueOf(errorInputTimes));
 		debugKNN.setText(mKNN.getChars());
+		recentAccuracyText.setText(String.valueOf(stat.recentAccuracy*100) + "%");
 		
 	}
 	

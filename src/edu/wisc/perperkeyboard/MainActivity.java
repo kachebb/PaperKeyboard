@@ -149,6 +149,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		/*********************check whether gyro agrees that there is a key stroke *******************/
 		long curTime=System.nanoTime();
 		//first case: screen is being touched
+		
 		if (Math.abs(curTime-this.mGyro.lastTouchScreenTime) < mGyro.TOUCHSCREEN_TIME_INTERVAL){
 			Log.d("onRecBufFull", "screen touch detected nearby");
 			return;
@@ -312,6 +313,8 @@ public class MainActivity extends Activity implements RecBufListener{
 				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
 				+ String.valueOf(TRAINNUM - TrainedNum) + "left");
 		debugKNN.setText(mKNN.getChars());
+		if(this.finishedTraining)
+			recordingThread.start();
 	}
 
 	/**
@@ -375,7 +378,9 @@ public class MainActivity extends Activity implements RecBufListener{
 		});
 	}
 
+	
 	/***************************start and stop gyro helper ****************************/
+	
 	@Override
 	  protected void onResume() {
 	    super.onResume();
@@ -395,7 +400,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	    	Log.d(LTAG, "try to register gyro sensor. but there is no GyroHelper class used");
 	    }
 	  }	
-	
+
 }
 
 /**
