@@ -99,7 +99,7 @@ public class Statistic{
 	 * @param E if the input is an error
 	 */
 	public void addInput(int op, String re){
-		if(totalInputTimes == 100){
+		if(totalInputTimes%100 == 0){
 			int correctTimes = correctionTimes-lastCorrectionTimes;
 			correctionList.add(correctTimes);
 			lastCorrectionTimes = correctionTimes;
