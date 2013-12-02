@@ -16,7 +16,7 @@ import android.util.Log;
 public class SPUtil {
 	// hardCoded the sampling rate 48000Hz
 	public static final int SAMPLING_RATE = 48000;
-	private static final int FREQ_FEATURE_SZ = 200; // number of frequency bins used as features. targeting <5k hz
+	private static final int FREQ_FEATURE_SZ = 800; // number of frequency bins used as features. targeting <5k hz
 	private static final String LTAG = "jj-dspUtil";	
 	
 	/**
@@ -63,15 +63,19 @@ public class SPUtil {
 	 *         storage because of the symmetry of fft
 	 */
 	public static double[] fft(double[] data, boolean useWindowFunction) {
-		double[] fftInput = new double[data.length];
+		final int FFTSIZE = 6000;
+		//double[] fftInput = new double[data.length];
+		double[] fftInput = new double[FFTSIZE];
 		if (useWindowFunction) {
 			int windowSize = data.length;
+		//	int windowSize = FFTSIZE;
 			double[] windowedInput = applyWindowFunc(data, hanning(windowSize));
-			System.arraycopy(windowedInput, 0, fftInput, 0,
+			System.arraycopy(windowedInput, 0, fftInput, FFTSIZE/4,
 					windowedInput.length);
 		} else {
-			System.arraycopy(data, 0, fftInput, 0, data.length);
+			System.arraycopy(data, 0, fftInput, (FFTSIZE-2000)/2, data.length);
 		}
+		
 		int dataLength = fftInput.length;
 		RealDoubleFFT ftEngine = new RealDoubleFFT(dataLength);
 		// coefficient returned: 0 -- 0th bin(real,0); 1,2 -- 1th

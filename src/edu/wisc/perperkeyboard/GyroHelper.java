@@ -22,7 +22,7 @@ public class GyroHelper implements SensorEventListener{
 	public final long DESK_TIME_INTERVAL=300000000;//400ms
 	
 	private final float GYRO_TOUCHSCRREN_THRESHOLD=(float) 0.15; 
-	public float GYRO_DESK_THRESHOLD=(float)0.003;//0.012; 	
+	public float GYRO_DESK_THRESHOLD=(float)0.001;//0.012; 	
 
 	/************gyro scope sensor*********************/
 	//UI thread update, recording thread check

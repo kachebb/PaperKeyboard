@@ -37,7 +37,7 @@ import edu.wisc.jj.SPUtil;
 public class TestingActivity extends Activity implements RecBufListener{
 	/*************constant values***********************/
 	private static final String LTAG = "testing activity debug";
-	private static final int STROKE_CHUNKSIZE = 2000;
+	private static int STROKE_CHUNKSIZE = 3000;
 	
 	/*************UI ********************************/
 	private TextView text;
@@ -140,8 +140,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 		text.setText("Training Size:"+String.valueOf(mKNN.getTrainingSize()));
 		debugKNN.setText(mKNN.getChars());
 		showDetectResult = new ArrayList<String>();
-		dictStatus = true;
-		
+		dictStatus = false;
+		this.STROKE_CHUNKSIZE = MainActivity.STROKE_CHUNKSIZE;
 		
 		/****************Init RecBuffer and thread*****************/
 		mBuffer = new RecBuffer();
@@ -290,7 +290,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K,hintsFromDict);
 		this.previousKey =  detectResult;		
 		//add unsure sample to staging area
-		mKNN.addToStage(detectResult, features);
+		//TODO 
+		//mKNN.addToStage(detectResult, features);
 		
 		/**********statistic***************/
 		stat.addInput(0,detectResult); //we suppose the input is correct		
@@ -346,9 +347,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 						public void onClick(View v) {
 							// race condition, UI is updating KNN, need to make
 							// sure the background thread will not change mKNN
+		
 							mGyro.lastTouchScreenTime=System.nanoTime();														
-							mKNN.correctWrongDetection(((Button) v).getText()
-									.toString(),detectResult);
+							//TODO
+							//mKNN.correctWrongDetection(((Button) v).getText()
+								//	.toString(),detectResult);
 							charas=charas.substring(0,charas.length()-1);
 							showDetectResult.remove(showDetectResult.size()-1);
 							//update output according to shift and caps

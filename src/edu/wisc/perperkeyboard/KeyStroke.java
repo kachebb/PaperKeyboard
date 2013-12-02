@@ -1,8 +1,8 @@
 package edu.wisc.perperkeyboard;
 
 public class KeyStroke {
-	public static int THRESHOLD = 6000;
-	private static final int CHUNKSIZE= 2000;
+	public static int THRESHOLD = 1000;
+	private static final int CHUNKSIZE= 3000;//TODO
 	private static final int SAMPLERATE = 48000;
 	//private static final int DIST = 20000; //TODO modified
 	//two parameter for detectStroke and chunkdata_energy
@@ -31,9 +31,15 @@ public class KeyStroke {
 		for(i=0;i< len; i++){
 			if(data[i] > THRESHOLD || data[i] < -THRESHOLD){
 				if (0 == (i % 2))
-					return i;
+					if(i-400 < 0)
+						return 0;
+					else
+						return i-200;
 				else
-					return i-1; //make sure we are giving back the index that is even (2 channels)
+					if(i-401 < 0)
+						return 0;
+					else
+						return i-201; //make sure we are giving back the index that is even (2 channels)
 			}
 		}
 		return -1;
