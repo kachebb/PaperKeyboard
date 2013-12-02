@@ -73,6 +73,7 @@ public final class R {
         public static final int errorTimes_hint=0x7f06000f;
         public static final int finish=0x7f060014;
         public static final int hello_world=0x7f060002;
+        public static final int inputRate=0x7f060016;
         public static final int inputTimes=0x7f06000e;
         public static final int inputTimes_hint=0x7f06000d;
         public static final int recentAccuracy=0x7f060013;

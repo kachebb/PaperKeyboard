@@ -24,7 +24,7 @@
          android:layout_height="wrap_content"
          android:layout_below = "@id/text_debugKNN"
          android:gravity="center"
-         android:hint="@string/detectIndication"
+         android:hint="@string/inputRate"
          android:textSize="13sp" />
 
      <TextView

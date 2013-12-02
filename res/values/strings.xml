@@ -23,5 +23,6 @@
 	<string name = "recentAccuracy">recent accuracy</string>
 	<string name = "finish">finish</string>
 	<string name = "button_Dict">use Dict</string>
+	<string name = "inputRate">input rate</string>
 	
 </resources>

@@ -313,8 +313,12 @@ public class MainActivity extends Activity implements RecBufListener{
 				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
 				+ String.valueOf(TRAINNUM - TrainedNum) + "left");
 		debugKNN.setText(mKNN.getChars());
-		if(this.finishedTraining)
+		if(this.finishedTraining){
+			Toast.makeText(getApplicationContext(),
+					"Please Wait Until This disappear", Toast.LENGTH_SHORT)
+					.show();
 			recordingThread.start();
+		}
 	}
 
 	/**
@@ -373,7 +377,6 @@ public class MainActivity extends Activity implements RecBufListener{
 					debugKNN.setText(mKNN.getChars());
 					mButton.setText("Click to Test");
 				}
-				
 			}
 		});
 	}

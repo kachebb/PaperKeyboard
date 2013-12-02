@@ -26,6 +26,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.TextView.OnEditorActionListener;
 import android.widget.ToggleButton;
 import edu.wisc.jj.BasicKNN;
@@ -41,7 +42,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	/*************UI ********************************/
 	private TextView text;
 	private EditText editText;
-	private TextView texthint;
+	private TextView textInputRate;
 	private volatile static String charas = "";
 	private volatile static List<String> showDetectResult;
 	private TextView debugKNN;
@@ -82,7 +83,6 @@ public class TestingActivity extends Activity implements RecBufListener{
 	//should be " ". right now for training simplicity, used an arbitrary character
 	private static final String WORD_SPLITTER = "a";	
 	private boolean dictStatus = true;
-
 	
 	@SuppressLint("NewApi")
 	@Override
@@ -92,7 +92,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		setContentView(R.layout.activity_testing);
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 		text = (TextView) findViewById(R.id.text_detectionResult);
-		texthint = (TextView) findViewById(R.id.text_detection);
+		textInputRate = (TextView) findViewById(R.id.text_detection);
 		editText = (EditText) findViewById(R.id.inputChar);
 		debugKNN = (TextView) findViewById(R.id.text_debugKNN);
 		totalInputText = (TextView) findViewById(R.id.text_inputTimes);
@@ -121,6 +121,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 					//update output according to shift and caps
 					updateData(v.getText().toString());
 		        	halt = false;
+		        	stat.addInput(2,v.getText().toString());
 		        	updateUI();
 		            handled = true;
 		        }
@@ -149,9 +150,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 		Log.d(LTAG, "on create called once for main acitivity");
 		this.register(mBuffer);
 		recordingThread = new Thread(mBuffer);
+		Toast.makeText(getApplicationContext(),
+				"Please Wait Until This disappear", Toast.LENGTH_SHORT).show();
 		recordingThread.start();
 		text.requestFocus();
-		stat = new Statistic();
+		stat = new Statistic(System.currentTimeMillis());
 		
 		/********************gyro helper**************************/				
 		this.mGyro=new GyroHelper(this.getApplicationContext());
@@ -265,9 +268,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		// this.dealwithBackSpace(features);
 		// else Log.d(LTAG, "screen halts audioprocessing, we do nothing");
 		
-		/**********statistic***************/
-		stat.addInput(false); //we suppose the input is correct		
-
+		
 		
 		/*********get hints from dictionary*****************/
 		List<String> hintsFromDict=null;
@@ -290,6 +291,10 @@ public class TestingActivity extends Activity implements RecBufListener{
 		this.previousKey =  detectResult;		
 		//add unsure sample to staging area
 		mKNN.addToStage(detectResult, features);
+		
+		/**********statistic***************/
+		stat.addInput(0,detectResult); //we suppose the input is correct		
+
 		
 		/**********caps and shift*******/
 		//set shift and caps condition
@@ -367,7 +372,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 							
 							Log.d("after correction: ", mKNN.toString());
 							
-							stat.addInput(true);
+							stat.addInput(1, ((Button)v).getText().toString());
 							//Update UI;
 							updateUI();
 						}
@@ -451,22 +456,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 		int len = charas.length();
 		if(len > 0)
 			charas = charas.substring(0, len-1);
-		//this.halt = true;
-//		text.setText(charas);
 		int len1 = showDetectResult.size();
 		if(len > 0)
 			showDetectResult.remove(len1-1);
-		text.setText(showDetectResult.toString());
-		debugKNN.setText(mKNN.getChars());
-		clickTimes++;
-		texthint.setText("clickTimes:" + String.valueOf(clickTimes));
-		if (clickTimes == 2 && clickOnceAndSame) {
-			this.halt = true;
-			//mKNN.removeLatestInput(); // we did wrong training when testing,
-										// remove it
-			((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE))
-					.showSoftInput(editText, InputMethodManager.SHOW_FORCED);
-		}
+		updateUI();
+		stat.addInput(3, "backspace");
 	}
 
 	/**
@@ -474,13 +468,15 @@ public class TestingActivity extends Activity implements RecBufListener{
 	 * @param view
 	 */
 	public void onClickButtonFinish(View view){
-		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss");
-		Date date = new Date();
 		
-		stat.doLogs("PaperKeyboard"+ dateFormat.format(date));
+		stat.doLogs("PaperKeyboard");
 		android.os.Process.killProcess(android.os.Process.myPid());
 	}
 	
+	/**
+	 * when click button Dict
+	 * @param view
+	 */
 	public void onClickDict(View view){
 		this.dictStatus = !this.dictStatus;
 		Button button = (Button) findViewById(R.id.button_Dict);
@@ -523,7 +519,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	
 	public void updateUI(){
 		/***Update UI********/
-		texthint.setText("click Times:" + String.valueOf(clickTimes));
+		textInputRate.setText("input rate:" + String.valueOf(stat.inputRate)+ "ch/s") ;
 		//text.setText(charas);
 		text.setText(showDetectResult.toString());
 		totalInputText.setText(String.valueOf(this.stat.totalInputTimes));
