@@ -28,8 +28,9 @@ public class Statistic{
 	private List<Double> recentAccuList;
 	private List<Double> totalAccuList;
 	/*******for correction**************/
-	private int correctionTimes;
-	
+	private int correctionTimes = 0;
+	private int lastCorrectionTimes = 0;
+	private List<Integer> correctionList;
 	/***********for input rate**************/
 	//date
 //	Date startTime;
@@ -75,6 +76,7 @@ public class Statistic{
 		totalAccuList = new ArrayList<Double>();
 		inputRatesList = new ArrayList<Double>();
 		operationList = new ArrayList<Operation>();
+		correctionList = new ArrayList<Integer>();
 		totalInputTimes = 0;
 		totalErrorTimes = 0;
 		lastInputTimes = 0;
@@ -97,11 +99,16 @@ public class Statistic{
 	 * @param E if the input is an error
 	 */
 	public void addInput(int op, String re){
-		synchronized(this){
-			totalInputTimes++; //TODO here I count every input, including touch screen as an input
+		if(totalInputTimes == 100){
+			int correctTimes = correctionTimes-lastCorrectionTimes;
+			correctionList.add(correctTimes);
+			lastCorrectionTimes = correctionTimes;
 		}
 		Operation operate = new Operation();
 		if(op == 0){//user input is detected
+			synchronized(this){
+				totalInputTimes++; 
+			}
 			if(recentResults.size() == RECENTSIZE){
 				recentResults.remove(0); //remove the first input result
 				recentResults.add(0); //add the recent input result
@@ -112,9 +119,6 @@ public class Statistic{
 			operate.value = re;
 			operationList.add(operate);
 		}else if(op == 1){ //corrected by button
-			synchronized(this){
-				totalInputTimes --;
-			}
 			totalErrorTimes ++;			
 			recentResults.remove(recentResults.size() - 1);
 			recentResults.add(1); 
@@ -122,9 +126,6 @@ public class Statistic{
 			operate.value = re;
 			operationList.add(operate);
 		}else if (op == 2){
-			synchronized(this){
-				totalInputTimes --;
-			}
 			totalErrorTimes ++;			
 			recentResults.remove(recentResults.size() - 1);
 			recentResults.add(1); 
@@ -178,7 +179,7 @@ public class Statistic{
 		Date date = new Date();
 		DecimalFormat df = new DecimalFormat("0.0000");
 		/******************log accuracy****************************/
-		String Name = "/sdcard/PaperKeyboardLog/" + fileName + "_accuracy"+ dateFormat.format(date);
+		String Name = "/sdcard/PaperKeyboardLog/"+"accuracy";//+ dateFormat.format(date);
 		File mFile_log = new File(Name);
 		FileOutputStream outputStream_log = null;
 		try {
@@ -191,13 +192,10 @@ public class Statistic{
 			String header = "paper keyboard test result: \n"
 					+ "file created time: " + dateFormat.format(date) + "\n";
 			osw.write(header);
-			header = "total input times:" + String.valueOf(totalInputTimes) 
-					+ "\n" + "error times:" + String.valueOf(totalErrorTimes) +"\n";
-			osw.write(header);
 			String form = "totalAccuracy                 recentAccuracy\n";
 			osw.write(form);
 			for (int i = 0; i < totalAccuList.size(); i++) {
-				osw.write(df.format(totalAccuList.get(i))+ "            " + df.format(recentAccuList.get(i)) + "\n");	
+				osw.write(df.format(totalAccuList.get(i))+ "                    " + df.format(recentAccuList.get(i)) + "\n");	
 			}
 			osw.flush();
 			osw.close();
@@ -211,7 +209,7 @@ public class Statistic{
 		}
 		
 		/*****************log inputRate********************/
-	    Name = "/sdcard/PaperKeyboardLog/" + fileName + "_inputRate"  + dateFormat.format(date);
+	    Name = "/sdcard/PaperKeyboardLog/" + "inputRate";//  + dateFormat.format(date);
 		mFile_log = new File(Name);
 		outputStream_log = null;
 		try {
@@ -223,11 +221,6 @@ public class Statistic{
 			OutputStreamWriter osw = new OutputStreamWriter(outputStream_log);
 			String header = "paper keyboard input rate result: \n"
 					+ "file created time: " + dateFormat.format(date) + "\n";
-			osw.write(header);
-			double totalInputRate = (double)totalInputTimes/(double)(System.currentTimeMillis()-startTime)*1000;
-			header = "total input rate:" + String.valueOf(totalInputRate)+ "ch/s\n";
-			osw.write(header);
-			header = "total correction times:" + String.valueOf(correctionTimes) +"\n";
 			osw.write(header);
 			String form = "Accuracy every" + String.valueOf(inputRateUpdateTime) + "ms\n";
 			osw.write(form);
@@ -244,9 +237,37 @@ public class Statistic{
 			System.out.println("IOException occurs");
 			return false;
 		}
-		
+		/********************log correction rate********************/
+		 Name = "/sdcard/PaperKeyboardLog/correctionRate";//  + dateFormat.format(date);
+			mFile_log = new File(Name);
+			outputStream_log = null;
+			try {
+				// choose to append
+				if(!mFile_log.exists()){
+					mFile_log.createNewFile();
+				}
+				outputStream_log = new FileOutputStream(mFile_log, true);
+				OutputStreamWriter osw = new OutputStreamWriter(outputStream_log);
+				String header = "paper keyboard input rate result: \n"
+						+ "file created time: " + dateFormat.format(date) + "\n";
+				osw.write(header);
+				String form = "Correction every 100 input\n";
+				osw.write(form);
+				for (int i = 0; i < correctionList.size(); i++) {
+					osw.write(df.format(correctionList.get(i)) + "\n");	
+				}
+				osw.flush();
+				osw.close();
+				osw = null;
+			} catch (FileNotFoundException e) {
+				System.out.println("the directory doesn't exist!");
+				return false;
+			} catch (IOException e) {
+				System.out.println("IOException occurs");
+				return false;
+			}
 		/********************log all operate************************/
-		 Name = "/sdcard/PaperKeyboardLog/" + fileName + "_AllOperate" + dateFormat.format(date);
+		 Name = "/sdcard/PaperKeyboardLog/"+"AllOperate" ;//+ dateFormat.format(date);
 			mFile_log = new File(Name);
 			outputStream_log = null;
 			try {
@@ -259,6 +280,16 @@ public class Statistic{
 				String header = "paper keyboard test all operates log: \n"
 						+ "file created time: " + dateFormat.format(date) + "\n";
 				osw.write(header);
+				header = "total input times:" + String.valueOf(totalInputTimes) 
+						+ "\n" + "error times:" + String.valueOf(totalErrorTimes) +"\n";
+				osw.write(header);
+				
+				double totalInputRate = (double)totalInputTimes/(double)(System.currentTimeMillis()-startTime)*1000;
+				header = "total input rate:" + String.valueOf(totalInputRate)+ "ch/s\n";
+				osw.write(header);
+				header = "total correction times:" + String.valueOf(correctionTimes) +"\n";
+				osw.write(header);
+				
 				header = "operate explaination: 0--normal input,  1--correct by button, 2--correct by EditText, 3--click backspace";
 				osw.write(header);
 				header = "total correction times:" + String.valueOf(correctionTimes) +"\n";
