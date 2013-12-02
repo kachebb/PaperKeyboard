@@ -24,5 +24,8 @@
 	<string name = "finish">finish</string>
 	<string name = "button_Dict">use Dict</string>
 	<string name = "inputRate">input rate</string>
+		<string name = "waveThreshold">wave</string>
+			<string name = "gyroThreshold">gyro</string>
+	
 	
 </resources>

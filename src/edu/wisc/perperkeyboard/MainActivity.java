@@ -3,27 +3,29 @@ package edu.wisc.perperkeyboard;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
-
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import edu.wisc.jj.BasicKNN;
-import edu.wisc.jj.KNN;
-import edu.wisc.jj.SPUtil;
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
-
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
-
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.TextView.OnEditorActionListener;
 import android.widget.Toast;
+import edu.wisc.jj.BasicKNN;
+import edu.wisc.jj.SPUtil;
 
 
 @SuppressLint("NewApi")
@@ -50,6 +52,8 @@ public class MainActivity extends Activity implements RecBufListener{
 	/*************UI********************/
 	private static TextView text;
 	private static Button mButton;
+	private static EditText waveThre;
+	private static EditText gyroThre;
 	private Thread recordingThread;
 	private RecBuffer mBuffer;
 	private static TextView debugKNN;
@@ -76,6 +80,40 @@ public class MainActivity extends Activity implements RecBufListener{
 		text = (TextView) findViewById(R.id.text_showhint);
 		mButton = (Button) findViewById(R.id.mButton);
 		debugKNN = (TextView) findViewById(R.id.text_debugKNN);
+		waveThre = (EditText) findViewById(R.id.input_waveThreshold);
+		gyroThre = (EditText) findViewById(R.id.input_gyroThreshold);
+		waveThre.setText(String.valueOf(KeyStroke.THRESHOLD));
+		
+		waveThre.setOnEditorActionListener(new OnEditorActionListener() {
+		    @Override
+		    public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+		        boolean handled = false;
+		        //halt = true;
+		        if (actionId == EditorInfo.IME_ACTION_SEND) {
+		        	String value = v.getText().toString();
+		        	KeyStroke.THRESHOLD = Integer.parseInt(value);	        	
+		        }
+		        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+		        imm.toggleSoftInput(0, 0);
+		        return handled;
+		    }
+		});
+		waveThre.clearFocus();
+		gyroThre.setOnEditorActionListener(new OnEditorActionListener() {
+		    @Override
+		    public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+		        boolean handled = false;
+		        //halt = true;
+		        if (actionId == EditorInfo.IME_ACTION_SEND) {
+		        	String value = v.getText().toString();
+		        	mGyro.GYRO_DESK_THRESHOLD = Float.parseFloat(value);        	
+		        }
+		        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+		        imm.toggleSoftInput(0, 0);
+		        return handled;
+		    }
+		});
+		gyroThre.clearFocus();
 		/******init values*************/
 		this.inStrokeMiddle = false;
 		this.strokeSamplesLeft = 0;
@@ -101,6 +139,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		
 		//get gyro helper
 		this.mGyro=new GyroHelper(getApplicationContext());
+		gyroThre.setText(String.valueOf(mGyro.GYRO_DESK_THRESHOLD));
 	}
 
 	@Override

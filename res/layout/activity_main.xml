@@ -12,15 +12,18 @@
          android:layout_height="wrap_content"
          android:hint="@string/debugKNN"
          android:textSize="12sp" />
-    <TextView android:id = "@+id/text_showhint"   
-        android:layout_width = "400dp"
-        android:layout_height = "fill_parent"
-        android:layout_above = "@+id/mButton"
+
+    <TextView
+        android:id="@+id/text_showhint"
+        android:layout_width="400dp"
+        android:layout_height="fill_parent"
+        android:layout_above="@+id/mButton"
         android:layout_below="@id/text_debugKNN"
-        android:textSize="30sp"
-        android:gravity = "center"
-        android:hint = "@string/text_hint"
-        />
+        android:focusable="true"
+        android:gravity="center"
+        android:hint="@string/text_hint"
+        android:textSize="30sp" />
+
     <Button
 	    android:id="@+id/restartButton"
         android:layout_width="wrap_content"
@@ -43,6 +46,46 @@
         android:text="@string/button_clear" 
      	android:onClick="onClickClear"
         />
+    <TextView
+        android:id="@+id/text_waveThreshold"
+        android:hint = "@string/waveThreshold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@id/text_debugKNN"
+        />
+
+    <EditText
+        android:id="@+id/input_waveThreshold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/text_waveThreshold"
+        android:gravity="center"
+        android:imeOptions="actionSend"
+         android:inputType="text"
+        
+        android:hint="@string/waveThreshold" />
+
+     <TextView
+        android:id="@+id/text_gyroThreshold"
+        android:hint = "@string/gyroThreshold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+     	android:layout_toRightOf = "@id/input_waveThreshold"
+        android:layout_below="@id/text_debugKNN"
+        />
+
+    <EditText
+        android:id="@+id/input_gyroThreshold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/text_gyroThreshold"
+        android:gravity="center"
+        android:imeOptions="actionSend"
+         android:inputType="text"
+        
+        android:hint="@string/waveThreshold" />
+
 	<Button
 	    android:id="@+id/mButton"
         android:layout_width="fill_parent"
