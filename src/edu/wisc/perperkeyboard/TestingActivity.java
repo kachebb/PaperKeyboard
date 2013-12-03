@@ -37,7 +37,7 @@ import edu.wisc.jj.SPUtil;
 public class TestingActivity extends Activity implements RecBufListener{
 	/*************constant values***********************/
 	private static final String LTAG = "testing activity debug";
-	private static int STROKE_CHUNKSIZE = 3000;
+	private int STROKE_CHUNKSIZE = 3000;
 	
 	/*************UI ********************************/
 	private TextView text;
@@ -78,7 +78,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private GyroHelper mGyro;
 
 	/********************dictionary**************************/
-	private Dictionary mDict;
+	private static Dictionary mDict;
 	//use WORD_SPLITTER to separate words from words
 	//should be " ". right now for training simplicity, used an arbitrary character
 	private static final String WORD_SPLITTER = "a";	
@@ -142,7 +142,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		showDetectResult = new ArrayList<String>();
 		dictStatus = false;
 		this.STROKE_CHUNKSIZE = MainActivity.STROKE_CHUNKSIZE;
-		
+		this.mGyro.GYRO_DESK_THRESHOLD = MainActivity.mGyro.GYRO_DESK_THRESHOLD;
 		/****************Init RecBuffer and thread*****************/
 		mBuffer = new RecBuffer();
 		recordingThread = new Thread(mBuffer);

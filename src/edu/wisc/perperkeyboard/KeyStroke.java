@@ -2,7 +2,7 @@ package edu.wisc.perperkeyboard;
 
 public class KeyStroke {
 	public static int THRESHOLD = 1000;
-	private static final int CHUNKSIZE= 3000;//TODO
+	private static final int CHUNKSIZE= 2000;//TODO
 	private static final int SAMPLERATE = 48000;
 	//private static final int DIST = 20000; //TODO modified
 	//two parameter for detectStroke and chunkdata_energy

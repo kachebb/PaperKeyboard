@@ -78,7 +78,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	private int TrainedNum = 0;  // for each key, how many key stroke we have collected
 	
 	/***********************gyro helper********************/
-	private GyroHelper mGyro;
+	public static GyroHelper mGyro;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
