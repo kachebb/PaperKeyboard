@@ -37,7 +37,7 @@ import edu.wisc.jj.SPUtil;
 public class TestingActivity extends Activity implements RecBufListener{
 	/*************constant values***********************/
 	private static final String LTAG = "testing activity debug";
-	private static final int STROKE_CHUNKSIZE = 2000;
+	private static final int STROKE_CHUNKSIZE=MainActivity.STROKE_CHUNKSIZE;
 	private static final int SAMPLING_RATE= 48000;
 	private static final int CHANNEL_COUNT = 2;	
 	
@@ -56,8 +56,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 	
 	/*************Audio Processing*******************/
 	private BasicKNN mKNN;
-	private boolean inStrokeMiddle;
-	private int strokeSamplesLeft;
+//	private boolean inStrokeMiddle;
+//	private int strokeSamplesLeft;
 	private Thread recordingThread;
 	private RecBuffer mBuffer ;	
 	private AudioBuffer strokeAudioBuffer;
@@ -82,7 +82,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private GyroHelper mGyro;
 
 	/********************dictionary**************************/
-	private Dictionary mDict;
+	private static Dictionary mDict;
 	//use WORD_SPLITTER to separate words from words
 	//should be " ". right now for training simplicity, used an arbitrary character
 	private static final String WORD_SPLITTER = "a";	
@@ -92,6 +92,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
 		/************init UI************************/
 		setContentView(R.layout.activity_testing);
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
@@ -144,8 +145,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		text.setText("Training Size:"+String.valueOf(mKNN.getTrainingSize()));
 		debugKNN.setText(mKNN.getChars());
 		showDetectResult = new ArrayList<String>();
-		dictStatus = true;
-		
+		dictStatus = false;
 		
 		/****************Init RecBuffer and thread*****************/
 		mBuffer = new RecBuffer();
@@ -202,6 +202,9 @@ public class TestingActivity extends Activity implements RecBufListener{
 	 */
 	@SuppressLint("NewApi")
 	public void onRecBufFull(short[] data) {
+		/*********************smoothy the curve*****************************************/		
+		SPUtil.smooth(data);		
+		
 		/**************** put recording to buffer ********************/
 		this.strokeAudioBuffer.add(data);
 		
@@ -242,7 +245,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 				} else {
 					//detect a new key stroke
 					//revert the startIdx back, so that we get info before the strong peak
-					this.strokeAudioBuffer.setValidIdx(startIdx-20, data.length);
+					this.strokeAudioBuffer.setValidIdx(startIdx-200, data.length);
 				}
 			}
 		}
@@ -295,7 +298,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K,hintsFromDict);
 		this.previousKey =  detectResult;		
 		//add unsure sample to staging area
-		mKNN.addToStage(detectResult, features);
+		//TODO 
+		//mKNN.addToStage(detectResult, features);
 		
 		/**********statistic***************/
 		stat.addInput(0,detectResult); //we suppose the input is correct		
@@ -351,9 +355,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 						public void onClick(View v) {
 							// race condition, UI is updating KNN, need to make
 							// sure the background thread will not change mKNN
+		
 							mGyro.lastTouchScreenTime=System.nanoTime();														
-							mKNN.correctWrongDetection(((Button) v).getText()
-									.toString(),detectResult);
+							//TODO
+							//mKNN.correctWrongDetection(((Button) v).getText()
+								//	.toString(),detectResult);
 							charas=charas.substring(0,charas.length()-1);
 							showDetectResult.remove(showDetectResult.size()-1);
 							//update output according to shift and caps

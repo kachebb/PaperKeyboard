@@ -19,7 +19,7 @@ import android.util.Log;
 public class RecBuffer implements Runnable {
 	private static final String LTAG = "jjTag";
 	DataOutputStream os; // the input for current run time
-	// this is in terms of shorts.
+	// this is in terms of shorts. 10 ms
 	private static final int BUFSIZE = 48000 * 2 * 10 / 1000;
 
 	// the receiving thread

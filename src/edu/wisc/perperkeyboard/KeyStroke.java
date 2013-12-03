@@ -31,9 +31,17 @@ public class KeyStroke {
 		for(i=0;i< len; i++){
 			if(data[i] > THRESHOLD || data[i] < -THRESHOLD){
 				if (0 == (i % 2))
+//					if(i-400 < 0)
+//						return 0;
+//					else
+//						return i-200;
 					return i;
 				else
-					return i-1; //make sure we are giving back the index that is even (2 channels)
+					return i-1;					
+//					if(i-401 < 0)
+//						return 0;
+//					else
+//						return i-201; //make sure we are giving back the index that is even (2 channels)
 			}
 		}
 		return -1;

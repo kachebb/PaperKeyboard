@@ -1,8 +1,16 @@
 package edu.wisc.perperkeyboard;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -33,7 +41,8 @@ public class MainActivity extends Activity implements RecBufListener{
 	/**********constant values****************/
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
-	private static final int STROKE_CHUNKSIZE = 2000;
+	//used to synchronize STROKE_CHUNKSIZE in test activity
+	static final int STROKE_CHUNKSIZE = 2000;
 	private static final int SAMPLING_RATE= 48000;
 	private static final int CHANNEL_COUNT = 2;	
 	private static int TRAINNUM = 3; //how many keystroke we need to get for each key when training
@@ -47,7 +56,7 @@ public class MainActivity extends Activity implements RecBufListener{
 //	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 5 };
 //	private final int[] ExpectedInputNum = { 3, 1, 4, 11, 6 };
 //	private final int[] ExpectedInputNum = {4,1};
-	private final int[] ExpectedInputNum = {26};	
+	private final int[] ExpectedInputNum = {5};	
 	private InputStatus inputstatus;
 	private Set<InputStatus> elements;
 	Iterator<InputStatus> it; 
@@ -74,7 +83,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	private int TrainedNum = 0;  // for each key, how many key stroke we have collected
 	
 	/***********************gyro helper********************/
-	private GyroHelper mGyro;
+	public static GyroHelper mGyro;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -134,7 +143,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		
 		/*********create knn*************/
 		mKNN = new BasicKNN();
-		mKNN.setTrainingSize(5);
+		//mKNN.setTrainingSize(5);
 		// add training item names
 		trainingItemName = new ArrayList<ArrayList<String>>();
 		addTrainingItem.addTrainingItems(trainingItemName);
@@ -192,7 +201,10 @@ public class MainActivity extends Activity implements RecBufListener{
 	 */
 	@Override
 	public void onRecBufFull(short[] data) {
-//		Log.d("onRecBufFull", "data length: "+data.length);		
+//		Log.d("onRecBufFull", "data length: "+data.length);
+		/*********************smoothy the curve*****************************************/		
+		SPUtil.smooth(data);
+
 		/**************** put recording to buffer ********************/
 		this.strokeAudioBuffer.add(data);
 		
@@ -235,7 +247,7 @@ public class MainActivity extends Activity implements RecBufListener{
 					Log.d("onRecBufFull", "find a threadhold -- valid");																
 					//detect a new key stroke
 					//revert the startIdx back, so that we get info before the strong peak
-					this.strokeAudioBuffer.setValidIdx(startIdx-20, data.length);
+					this.strokeAudioBuffer.setValidIdx(startIdx-200, data.length);
 				}
 			}
 		}
@@ -415,32 +427,99 @@ public class MainActivity extends Activity implements RecBufListener{
 		// separate left and right channel
 		short[][] audioStrokeData = KeyStroke.seperateChannels(audioStroke);
 //		this.strokeBuffer=null;
+		
+		/******************log audio****************************/
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss");
+		Date date = new Date();
+		DecimalFormat df = new DecimalFormat("0.0000");
+		
+		String Name = "/sdcard/PaperKeyboardLog/"+"audio";//+ dateFormat.format(date);
+		File mFile_log = new File(Name);
+		FileOutputStream outputStream_log = null;
+		try {
+			// choose to append
+			if(!mFile_log.exists()){
+				mFile_log.createNewFile();
+			}
+			outputStream_log = new FileOutputStream(mFile_log, false);
+			OutputStreamWriter osw = new OutputStreamWriter(outputStream_log);
+			String header = "paper keyboard test result: \n"
+					+ "file created time: " + dateFormat.format(date) + "\n";
+			osw.write(header);
+			String form = "totalAccuracy                 recentAccuracy\n";
+			osw.write(form);
+			for (int i = 0; i < audioStrokeData[0].length; i++) {
+				osw.write(String.valueOf(audioStrokeData[0][i])+"\n");	
+			}
+			osw.flush();
+			osw.close();
+			osw = null;
+		} catch (FileNotFoundException e) {
+			// System.out.println("the directory doesn't exist!");
+			//return false;
+		} catch (IOException e) {
+			// System.out.println("IOException occurs");
+			//return false;
+		}
+
 		// get features
 		double[] features = SPUtil.getAudioFeatures(audioStrokeData);
+
+		/******************log features****************************/
+		
+		Name = "/sdcard/PaperKeyboardLog/"+"feature";//+ dateFormat.format(date);
+		mFile_log = new File(Name);
+		outputStream_log = null;
+		try {
+			// choose to append
+			if(!mFile_log.exists()){
+				mFile_log.createNewFile();
+			}
+			outputStream_log = new FileOutputStream(mFile_log, false);
+			OutputStreamWriter osw = new OutputStreamWriter(outputStream_log);
+			String header = "paper keyboard test result: \n"
+					+ "file created time: " + dateFormat.format(date) + "\n";
+			osw.write(header);
+			String form = "totalAccuracy                 recentAccuracy\n";
+			osw.write(form);
+			for (int i = 0; i < features.length; i++) {
+				osw.write(String.valueOf(features[i])+"\n");	
+			}
+			osw.flush();
+			osw.close();
+			osw = null;
+		} catch (FileNotFoundException e) {
+			// System.out.println("the directory doesn't exist!");
+			//return false;
+		} catch (IOException e) {
+			// System.out.println("IOException occurs");
+			//return false;
+		}
+		
+		
+		
+		
 		Log.d(LTAG, " adding features for item " + trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx));
 		mKNN.addTrainingItem(
 				trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx),
 				features);
-		curTrainingItemIdx++;		
-		if (this.ExpectedInputNum[inputstatus.ordinal()] == this.curTrainingItemIdx){
-			if(it.hasNext())
-			{
-				inputstatus = it.next();
-				Log.d(LTAG, "change to next character. next char: "+inputstatus);				
-				curTrainingItemIdx  = 0;
-			}
-			else{
-				TrainedNum ++;
-				if(TrainedNum == TRAINNUM)
+		TrainedNum ++;
+		if(TrainedNum == TRAINNUM){
+			this.curTrainingItemIdx++;	
+			TrainedNum = 0;
+			if (this.ExpectedInputNum[inputstatus.ordinal()] == this.curTrainingItemIdx){
+				if(it.hasNext())
 				{
-					this.finishedTraining=true;
-					//kill recording thread (myself)
-					recordingThread.interrupt();
-				}else{
-					elements = EnumSet.allOf(InputStatus.class);
-					it = elements.iterator();
 					inputstatus = it.next();
-					curTrainingItemIdx = 0;
+					Log.d(LTAG, "change to next character. next char: "+inputstatus);				
+					//curTrainingItemIdx  = 0;
+					TrainedNum = 0;
+		
+				}
+				else{
+						this.finishedTraining=true;
+						//kill recording thread (myself)
+						recordingThread.interrupt();
 				}
 			}
 		} 
