@@ -141,10 +141,19 @@ public class SPUtil {
 	 */
 	public static double[] getAudioFeatures(short[][] data){
 		double[] leftData=SPUtil.shortArrayToDouble(data[0]);
-		double[] rightData=SPUtil.shortArrayToDouble(data[1]);		
+		double[] rightData=SPUtil.shortArrayToDouble(data[1]);
+		/*************** pad 0s before doing fft ****************/
+		double[] leftData0Pad=new double[leftData.length+2*1000];
+		double[] rightData0Pad=new double[rightData.length+2*1000];
+		for (int i=0;i<leftData0Pad.length;i++){
+			leftData0Pad[i]=0;
+			rightData0Pad[i]=0;			
+		}
+		System.arraycopy(leftData, 0, leftData0Pad, 1000, leftData.length);
+		System.arraycopy(leftData, 0, rightData0Pad, 1000, rightData.length);		
 		//get fft
-		double[] leftFFT=SPUtil.fft(leftData, true);
-		double[] rightFFT=SPUtil.fft(rightData, true);
+		double[] leftFFT=SPUtil.fft(leftData0Pad, true);
+		double[] rightFFT=SPUtil.fft(rightData0Pad, true);
 		double[] features=null;
 		if (leftFFT.length!=rightFFT.length){
 			Log.e(LTAG,"length of left channel fft values is different from length of right channel");

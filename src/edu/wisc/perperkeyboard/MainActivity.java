@@ -34,7 +34,10 @@ public class MainActivity extends Activity implements RecBufListener{
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
 	private static final int STROKE_CHUNKSIZE = 2000;
-	private static int TRAINNUM = 3; //how many keystroke we need to get for each key when training 
+	private static final int SAMPLING_RATE= 48000;
+	private static final int CHANNEL_COUNT = 2;	
+	private static int TRAINNUM = 3; //how many keystroke we need to get for each key when training
+	
 	public static BasicKNN mKNN;
 	private enum InputStatus {
 		AtoZ, //NUM, LEFT, RIGHT, BOTTOM
@@ -58,10 +61,11 @@ public class MainActivity extends Activity implements RecBufListener{
 	private RecBuffer mBuffer;
 	private static TextView debugKNN;
 	/************audio collection***********/
-	private short[] strokeBuffer;
+//	private short[] strokeBuffer;
 	private boolean inStrokeMiddle;
 	private int strokeSamplesLeft;
-
+	private AudioBuffer strokeAudioBuffer;
+	
 	/***********training*****************/
 	private ArrayList<ArrayList<String>> trainingItemName;
 	private volatile int curTrainingItemIdx;
@@ -114,6 +118,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		    }
 		});
 		gyroThre.clearFocus();
+		
 		/******init values*************/
 		this.inStrokeMiddle = false;
 		this.strokeSamplesLeft = 0;
@@ -123,6 +128,9 @@ public class MainActivity extends Activity implements RecBufListener{
 		elements = EnumSet.allOf(InputStatus.class);
 		it = elements.iterator();
 		inputstatus = it.next();
+		
+		/****************audio buffer to store key strokes*****************/
+		this.strokeAudioBuffer=new AudioBuffer(SAMPLING_RATE,CHANNEL_COUNT,STROKE_CHUNKSIZE);
 		
 		/*********create knn*************/
 		mKNN = new BasicKNN();
@@ -184,77 +192,113 @@ public class MainActivity extends Activity implements RecBufListener{
 	 */
 	@Override
 	public void onRecBufFull(short[] data) {
-//		Log.d(LTAG, "inside onRecBuf full");
+//		Log.d("onRecBufFull", "data length: "+data.length);		
+		/**************** put recording to buffer ********************/
+		this.strokeAudioBuffer.add(data);
+		
 		/*********************check whether gyro agrees that there is a key stroke *******************/
 		long curTime=System.nanoTime();
 		//first case: screen is being touched
-		
 		if (Math.abs(curTime-this.mGyro.lastTouchScreenTime) < mGyro.TOUCHSCREEN_TIME_INTERVAL){
 			Log.d("onRecBufFull", "screen touch detected nearby");
 			return;
-		//2nd case: there is indeed some vibrations on the desk			
-		} else if (Math.abs(curTime-this.mGyro.lastTouchDeskTime) >= mGyro.DESK_TIME_INTERVAL){ 
-			Log.d("onRecBufFull", "no desk vibration feeled. not valid audio data. lastTouchDesktime: "+this.mGyro.lastTouchDeskTime + " .current time: "+curTime);
-			return;
-		}
+		} 
 		
-		if (!this.inStrokeMiddle) { // if not in the middle of a stroke
-			int startIdx = KeyStroke.detectStroke_threshold(data);
-			if (-1 == startIdx) { // when there is no stroke
+		/*****************when gyro feels some shake on the desk,check audio hints******/
+		//if there is such an audio data ready for processing
+		if (this.strokeAudioBuffer.hasKeyStrokeData()){
+			//check whether gyro agrees or not
+			// this assumption holds, since we are using 2000 
+			// data samples, (40ms) gyro will be updated around 4 times 
+			if (Math.abs(curTime-this.mGyro.lastTouchDeskTime) >= mGyro.DESK_TIME_INTERVAL){ 
+				Log.d("onRecBufFull", "no desk vibration feeled. not valid audio data. lastTouchDesktime: "+this.mGyro.lastTouchDeskTime + " .current time: "+curTime);
+				this.strokeAudioBuffer.clearValidIdx();
 				return;
-			} else { // there is an stroke
-				// this whole stroke is inside current buffer
-				if (data.length - startIdx >= STROKE_CHUNKSIZE * 2) {
-					Log.d(LTAG,
-							"key stroke, data length > chuncksize, data length: "
-									+ data.length);
-					this.inStrokeMiddle = false;
-					this.strokeSamplesLeft = 0;
-					this.strokeBuffer = Arrays.copyOfRange(data, startIdx,
-							startIdx + STROKE_CHUNKSIZE * 2);
-					this.runAudioProcessing();
-				} else { // there are some samples left in the next buffer
-					this.inStrokeMiddle = true;
-					this.strokeSamplesLeft = STROKE_CHUNKSIZE * 2
-							- (data.length - startIdx);
-					this.strokeBuffer = new short[STROKE_CHUNKSIZE * 2];
-					System.arraycopy(data, startIdx, strokeBuffer, 0,
-							data.length - startIdx);
-//					Log.d(LTAG,
-//							"key stroke, data length < chuncksize, stroke start idx: "
-//									+ startIdx + " stroke data length: "
-//									+ String.valueOf(data.length - startIdx)
-//									+ " stroke samples left "
-//									+ this.strokeSamplesLeft);
-				}
 			}
-		} else { // if in the middle of a stroke
-			if (data.length >= strokeSamplesLeft) {
-				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
-						- 1 - strokeSamplesLeft, strokeSamplesLeft);
-				this.inStrokeMiddle = false;
-				this.strokeSamplesLeft = 0;
-				this.strokeBuffer= Arrays.copyOf(this.strokeBuffer,
-						STROKE_CHUNKSIZE * 2);
-				// get the audio features from this stroke and add it to the
-				// training set, do it in background
-				this.runAudioProcessing();				
-//				Log.d(LTAG, "key stroke, data length >= samples left "
-//						+ " stroke data length: " + String.valueOf(data.length)
-//						+ " stroke samples left " + this.strokeSamplesLeft);
-			} else { // if the length is smaller than the needed sample left
-				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
-						- 1 - strokeSamplesLeft, data.length);
-				this.inStrokeMiddle = true;
-				this.strokeSamplesLeft = this.strokeSamplesLeft - data.length;
-//				Log.d(LTAG,
-//						"key stroke, data length < samples left size " + " stroke data length: "
-//								+ String.valueOf(data.length)
-//								+ " stroke samples left "
-//								+ this.strokeSamplesLeft);
+			Log.d("onRecBufFull", "audio has stroke");								
+			this.runAudioProcessing(this.strokeAudioBuffer.getKeyStrokeAudioForFeature());
+		} else {
+			//no audio data ready yet
+			// 2 cases:
+			// 1. detected a stroke, waiting for more audio
+			// 2. no stroke detected yet 
+			if (this.strokeAudioBuffer.needMoreAudio()){
+//				Log.d("onRecBufFull", "need more audio");
+				//do nothing when there's already a key stroke in place
+				//we are just waiting for more data
+				return;
+			} else {
+				int startIdx = KeyStroke.detectStroke_threshold(data);
+				if (-1 == startIdx) { // when there is no stroke
+					return;
+				} else {
+					Log.d("onRecBufFull", "find a threadhold -- valid");																
+					//detect a new key stroke
+					//revert the startIdx back, so that we get info before the strong peak
+					this.strokeAudioBuffer.setValidIdx(startIdx-20, data.length);
+				}
 			}
 		}
 	}
+		
+/////////////////////////////////////////////////////////////////////////////////////////////////	
+///		Log.d(LTAG, "inside onRecBuf full");
+//		/*********************check whether gyro agrees that there is a key stroke *******************/
+//		long curTime=System.nanoTime();
+//		//first case: screen is being touched
+//		
+//		if (Math.abs(curTime-this.mGyro.lastTouchScreenTime) < mGyro.TOUCHSCREEN_TIME_INTERVAL){
+//			Log.d("onRecBufFull", "screen touch detected nearby");
+//			return;
+//		//2nd case: there is indeed some vibrations on the desk			
+//		} else if (Math.abs(curTime-this.mGyro.lastTouchDeskTime) >= mGyro.DESK_TIME_INTERVAL){ 
+//			Log.d("onRecBufFull", "no desk vibration feeled. not valid audio data. lastTouchDesktime: "+this.mGyro.lastTouchDeskTime + " .current time: "+curTime);
+//			return;
+//		}
+//		
+//		if (!this.inStrokeMiddle) { // if not in the middle of a stroke
+//			int startIdx = KeyStroke.detectStroke_threshold(data);
+//			if (-1 == startIdx) { // when there is no stroke
+//				return;
+//			} else { // there is an stroke
+//				// this whole stroke is inside current buffer
+//				if (data.length - startIdx >= STROKE_CHUNKSIZE * 2) {
+//					Log.d(LTAG,
+//							"key stroke, data length > chuncksize, data length: "
+//									+ data.length);
+//					this.inStrokeMiddle = false;
+//					this.strokeSamplesLeft = 0;
+//					this.strokeBuffer = Arrays.copyOfRange(data, startIdx,
+//							startIdx + STROKE_CHUNKSIZE * 2);
+//					this.runAudioProcessing();
+//				} else { // there are some samples left in the next buffer
+//					this.inStrokeMiddle = true;
+//					this.strokeSamplesLeft = STROKE_CHUNKSIZE * 2
+//							- (data.length - startIdx);
+//					this.strokeBuffer = new short[STROKE_CHUNKSIZE * 2];
+//					System.arraycopy(data, startIdx, strokeBuffer, 0,
+//							data.length - startIdx);
+//				}
+//			}
+//		} else { // if in the middle of a stroke
+//			if (data.length >= strokeSamplesLeft) {
+//				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
+//						- 1 - strokeSamplesLeft, strokeSamplesLeft);
+//				this.inStrokeMiddle = false;
+//				this.strokeSamplesLeft = 0;
+//				this.strokeBuffer= Arrays.copyOf(this.strokeBuffer,
+//						STROKE_CHUNKSIZE * 2);
+//				// get the audio features from this stroke and add it to the
+//				// training set, do it in background
+//				this.runAudioProcessing();				
+//			} else { // if the length is smaller than the needed sample left
+//				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
+//						- 1 - strokeSamplesLeft, data.length);
+//				this.inStrokeMiddle = true;
+//				this.strokeSamplesLeft = this.strokeSamplesLeft - data.length;
+//			}
+//		}
+/////////////////////////////////////////////////////////////////////////////////////////////////	
 
 	/***
 	 * this function is called when button is click
@@ -364,13 +408,13 @@ public class MainActivity extends Activity implements RecBufListener{
 	/**
 	 * audio processing. extract features from audio. Add features to KNN.
 	 */
-	public void runAudioProcessing() {
+	public void runAudioProcessing(short[] audioStroke) {
 		// get the audio features from this stroke and add it
 		// to the training set, do it in background
-		short[] audioStroke = this.strokeBuffer;
+//		short[] audioStroke = this.strokeBuffer;
 		// separate left and right channel
 		short[][] audioStrokeData = KeyStroke.seperateChannels(audioStroke);
-		this.strokeBuffer=null;
+//		this.strokeBuffer=null;
 		// get features
 		double[] features = SPUtil.getAudioFeatures(audioStrokeData);
 		Log.d(LTAG, " adding features for item " + trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx));
