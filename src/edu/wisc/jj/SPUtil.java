@@ -63,27 +63,23 @@ public class SPUtil {
 	 *         storage because of the symmetry of fft
 	 */
 	public static double[] fft(double[] data, boolean useWindowFunction) {
-		final int FFTSIZE = 6000;
-		//double[] fftInput = new double[data.length];
-		double[] fftInput = new double[FFTSIZE];
-		if (useWindowFunction) {
-			int windowSize = data.length;
-		//	int windowSize = FFTSIZE;
-			double[] windowedInput = applyWindowFunc(data, hanning(windowSize));
-			System.arraycopy(windowedInput, 0, fftInput, FFTSIZE/4,
-					windowedInput.length);
-		} else {
-			System.arraycopy(data, 0, fftInput, (FFTSIZE-2000)/2, data.length);
-		}
-		
-		int dataLength = fftInput.length;
-		RealDoubleFFT ftEngine = new RealDoubleFFT(dataLength);
-		// coefficient returned: 0 -- 0th bin(real,0); 1,2 -- 1th
-		// bin(real,imag); 3,4 -- 2th bin(real,imag)....
-		// for even, n -- n/2 bin(real,0)
-		ftEngine.ft(fftInput);
-		// get the maginude from FFT coefficients
-		double[] spectrum;
+		double[] fftInput = new double[data.length];
+        if (useWindowFunction) {
+                int windowSize = data.length;
+                double[] windowedInput = applyWindowFunc(data, hanning(windowSize));
+                System.arraycopy(windowedInput, 0, fftInput, 0,
+                                windowedInput.length);
+        } else {
+                System.arraycopy(data, 0, fftInput, 0, data.length);
+        }
+        int dataLength = fftInput.length;
+        RealDoubleFFT ftEngine = new RealDoubleFFT(dataLength);
+        // coefficient returned: 0 -- 0th bin(real,0); 1,2 -- 1th
+        // bin(real,imag); 3,4 -- 2th bin(real,imag)....
+        // for even, n -- n/2 bin(real,0)
+        ftEngine.ft(fftInput);
+        // get the maginude from FFT coefficients
+        double[] spectrum;		
 		if (dataLength % 2 != 0) {// if odd
 			spectrum = new double[(dataLength + 1) / 2];
 			spectrum[0] = Math.pow(fftInput[0] * fftInput[0], 0.5);// dc
