@@ -61,7 +61,7 @@ public interface KNN {
 	 * underlying training data. Do not modify the each Item element. 
 	 * @return an array of Item that is closest to the point passed into classify method. length of the array is the argument "k" passed to the classify method called last time 
 	 */
-	public Item[] getClosestList();
+//	public Item[] getClosestList();
 	
 	/**
 	 * remove indexth element in the closestList being passed into this function from the training set 

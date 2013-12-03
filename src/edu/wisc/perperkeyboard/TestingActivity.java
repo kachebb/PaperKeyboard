@@ -1,7 +1,12 @@
 package edu.wisc.perperkeyboard;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.text.DateFormat;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,7 +74,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private String previousKey = "";
 	private boolean halt = false;
 	private boolean clickOnceAndSame = false;
-	private int CLASSIFY_K = 3;
+	private int CLASSIFY_K = 1;
 	private volatile List<Button> hintButtonList;
 	
 	/********************Shift and caps*****************************/
@@ -82,7 +87,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private GyroHelper mGyro;
 
 	/********************dictionary**************************/
-	private static Dictionary mDict;
+	private Dictionary mDict;
 	//use WORD_SPLITTER to separate words from words
 	//should be " ". right now for training simplicity, used an arbitrary character
 	private static final String WORD_SPLITTER = "a";	
@@ -164,7 +169,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		this.strokeAudioBuffer=new AudioBuffer(SAMPLING_RATE,CHANNEL_COUNT,STROKE_CHUNKSIZE);
 		
 		/********************gyro helper**************************/				
-		this.mGyro=new GyroHelper(this.getApplicationContext());
+		this.mGyro=MainActivity.mGyro;
 		
 		/********************dictionary**************************/
 		//use dict_2of12inf in resource/raw folder
@@ -275,8 +280,81 @@ public class TestingActivity extends Activity implements RecBufListener{
 	public void runAudioProcessing(short[] audioStroke) {
 		// separate left and right channel
 		short[][] audioStrokeData = KeyStroke.seperateChannels(audioStroke);
+		
+		
+		/******************log audio****************************/
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss");
+		Date date = new Date();
+		DecimalFormat df = new DecimalFormat("0.0000");
+		
+		String Name ="/sdcard/PaperKeyboardLog/"+"test"+ "_"+System.currentTimeMillis()/10;		
+
+		this.shortToPcm(audioStroke, Name);
+		File mFile_log = new File(Name);
+		FileOutputStream outputStream_log = null;
+		try {
+			// choose to append
+			if(!mFile_log.exists()){
+				mFile_log.createNewFile();
+			}
+			outputStream_log = new FileOutputStream(mFile_log, false);
+			OutputStreamWriter osw = new OutputStreamWriter(outputStream_log);
+			for (int i = 0; i < audioStrokeData[0].length; i++) {
+				osw.write(String.valueOf(audioStrokeData[0][i])+"\n");	
+			}
+			osw.flush();
+			osw.close();
+			osw = null;
+		} catch (FileNotFoundException e) {
+			// System.out.println("the directory doesn't exist!");
+			//return false;
+		} catch (IOException e) {
+			// System.out.println("IOException occurs");
+			//return false;
+		}
+		/******************log audio****************************/		
+		
+		
+		
 		// get features
 		double[] features= SPUtil.getAudioFeatures(audioStrokeData);
+		
+		
+		/******************log features****************************/
+		Name = "/sdcard/PaperKeyboardLog/"+"feature_"+ "_"+System.currentTimeMillis()/10;
+		mFile_log = new File(Name);
+		outputStream_log = null;
+		try {
+			// choose to append
+			if(!mFile_log.exists()){
+				mFile_log.createNewFile();
+			}
+			outputStream_log = new FileOutputStream(mFile_log, false);
+			OutputStreamWriter osw = new OutputStreamWriter(outputStream_log);
+//			String header = "paper keyboard test result: \n"
+//					+ "file created time: " + dateFormat.format(date) + "\n";
+//			osw.write(header);
+//			osw.write("feature start\n");
+			for (int i = 0; i < features.length; i++) {
+				osw.write(String.valueOf(features[i]) + "\n");	
+			}
+//			osw.write("\nfeature stop\n");				
+			osw.flush();
+			osw.close();
+			osw = null;
+		} catch (FileNotFoundException e) {
+			 System.out.println("the directory doesn't exist!");
+//			return false;
+		} catch (IOException e) {
+			 System.out.println("IOException occurs");
+			//return false;
+		}
+		/******************log features****************************/		
+
+		
+		
+		
+		
 		
 		/*********get hints from dictionary*****************/
 		List<String> hintsFromDict=null;
@@ -296,6 +374,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		
 		/********** detect using KNN *******/		
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K,hintsFromDict);
+		
 		this.previousKey =  detectResult;		
 		//add unsure sample to staging area
 		//TODO 
@@ -324,6 +403,14 @@ public class TestingActivity extends Activity implements RecBufListener{
 		/************* update UI ********************/
 		//decide which character to show
 		this.updateData(detectResult);
+
+		/************************ debug ******************/
+//		final String[] closestList=mKNN.getClosestList();
+//		String debug="";
+//		for (String item: closestList)
+//			debug+=item+",";
+//		this.updateData(debug);
+		/************************ debug ******************/		
 		
 		this.runOnUiThread(new Runnable() {
 			@SuppressLint("NewApi")
@@ -568,4 +655,36 @@ public class TestingActivity extends Activity implements RecBufListener{
 	    	Log.d(LTAG, "try to register gyro sensor. but there is no GyroHelper class used");
 	    }
 	  }	
+	  
+	  
+	  
+	  /********************************** debug ****************************/	  
+	// Transfer Int array into Byte array
+	// little endian
+	// @param: int[] IntData
+	public byte[] shortToByte(short[] shortData) {
+		byte[] ret = new byte[shortData.length * 2];
+		int i = 0;
+		for (i = 0; i < shortData.length; i++) {
+			ret[i * 2] = (byte)(shortData[i] & 0xff);
+			ret[i * 2 + 1] = (byte)((shortData[i] >> 8) & 0xff);
+		}
+		return ret;
+	}
+
+	// Save int array into PCM file
+	//
+	public void shortToPcm(short[] shortData, String Name) {
+		byte[] buffer;
+		try {
+			buffer = this.shortToByte(shortData);
+			FileOutputStream fos = new FileOutputStream(Name + ".pcm");
+			fos.write(buffer, 0, buffer.length);
+			fos.close();
+		} catch (Exception e) {
+		}
+	}
+	  /********************************** debug ****************************/
+	  
+	  
 }

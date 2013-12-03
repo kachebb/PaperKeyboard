@@ -153,7 +153,7 @@ public class AudioBuffer {
 	 */
 	public void setValidIdx(int indexInPrevAddedData, int lengthOfLastAddedData){
 		int prevAddedStartIdx= (this.tail-lengthOfLastAddedData >=0)?this.tail-lengthOfLastAddedData : this.tail-lengthOfLastAddedData + this.capacity;
-		this.validIdx=prevAddedStartIdx + indexInPrevAddedData;
+		this.validIdx=(prevAddedStartIdx + indexInPrevAddedData >=0 ) ? prevAddedStartIdx + indexInPrevAddedData: prevAddedStartIdx + indexInPrevAddedData+this.capacity;
 	}
 
 	/**

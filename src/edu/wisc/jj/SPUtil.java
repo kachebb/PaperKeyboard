@@ -16,7 +16,8 @@ import android.util.Log;
 public class SPUtil {
 	// hardCoded the sampling rate 48000Hz
 	public static final int SAMPLING_RATE = 48000;
-	private static final int FREQ_FEATURE_SZ = 800; // number of frequency bins used as features. targeting <5k hz
+	// number of frequency bins used as features. targeting <5k hz	
+	private static final int FREQ_FEATURE_SZ = 800; 
 	private static final String LTAG = "jj-dspUtil";	
 	
 	/**

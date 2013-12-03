@@ -39,7 +39,8 @@ public class RecBuffer implements Runnable {
 			p = Runtime.getRuntime().exec("/system/xbin/su");
 			this.os = new DataOutputStream(p.getOutputStream());
 			Log.d(LTAG, "Starts!");
-			SystemClock.sleep(100);
+//			SystemClock.sleep(4000);
+			SystemClock.sleep(100);			
 
 			os.writeBytes("/system/bin/tinymix 27 120\n");
 			os.flush();
@@ -81,7 +82,7 @@ public class RecBuffer implements Runnable {
 
 			// infinite recording
 			// changed for nexus 7
-			// os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 1 -d 0 -c 2 -r 48000 -b 16\n");
+//			os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 1 -d 0 -c 2 -r 48000 -b 16\n");
 			os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 0 -d 1 -c 2 -r 48000 -b 16\n");
 			os.flush();
 			SystemClock.sleep(100);

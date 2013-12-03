@@ -6,16 +6,20 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import android.annotation.SuppressLint;
+import android.util.Log;
 
 /**
  * A kNN classification algorithm implementation.
@@ -24,9 +28,9 @@ import android.annotation.SuppressLint;
 public class BasicKNN implements KNN{
 	List<Item> trainingSet;
 	Item[] closestList;
-	public final int DISTTHRE = 1;
-	private int trainingSize = 3; // number of training samples to keep for each
-									// category. default 5
+//	public final int DISTTHRE = 1;
+	private int trainingSize = 5; // number of training samples to keep for each
+									// category
 	private Item staged;
 	// sorted item's categories given distance. updated each time when classify
 	// is called
@@ -41,6 +45,14 @@ public class BasicKNN implements KNN{
 
 	public BasicKNN() {
 		this.trainingSet = Collections.synchronizedList(new ArrayList<Item>());
+		
+		/************************ debug*************************/
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss");
+		Date date = new Date();
+		DecimalFormat df = new DecimalFormat("0.0000");
+		this.appendLog("\n debug starts: KNN created at :");
+		this.appendLog(dateFormat.format(date)+"\n");
+		/************************ debug*************************/		
 	}
 
 	/**
@@ -69,6 +81,13 @@ public class BasicKNN implements KNN{
 	public void addTrainingItem(String category, double[] features) {
 		Item nItem = new Item(category, features);
 		this.trainingSet.add(nItem);
+		
+		/************************ debug*************************/
+		this.appendLog("add a new training item. training items:\n");
+		for (Item mItem:this.trainingSet){
+			this.appendLog(mItem.toString()+"\n");			
+		}
+		/************************ debug*************************/		
 	}
 
 	/**
@@ -101,8 +120,13 @@ public class BasicKNN implements KNN{
 	 *         to the classify method called last time
 	 */
 	@SuppressLint("NewApi")
-	public Item[] getClosestList() {
-		return Arrays.copyOf(this.closestList, this.closestList.length);
+	public String[] getClosestList() {
+		Item[] items=Arrays.copyOf(this.closestList, this.closestList.length);
+		String[] result=new String[this.closestList.length];
+		for (int i=0; i< result.length;i++){
+			result[i] = items[i].toString();
+		}
+		return result;
 	}
 
 	/**
@@ -187,10 +211,20 @@ public class BasicKNN implements KNN{
 			// update sortedItemMap
 			this.sortedItemMap.put(distance, this.trainingSet.get(i).category);
 		}
+		
+		/***************************debug***************************/
+		this.appendLog("classify item: "+ tItem.toString()+"\n");
+		/***************************debug***************************/
+		
 		// find kNN in trainingData
 		for (int i = nns.length; i < this.trainingSet.size(); i++) {
 			Item rItem = this.trainingSet.get(i);
 			double distance = findDistance(tItem, rItem);
+			
+			/***************************debug***************************/
+			this.appendLog("compare to training item: "+ rItem.toString()+"\n" + "distance: "+distance+"\n");
+			/***************************debug***************************/
+			
 			// update sortedItemMap
 			this.sortedItemMap.put(distance, rItem.category);
 
@@ -201,8 +235,13 @@ public class BasicKNN implements KNN{
 			}
 		}
 		catResult = getCat(nns,dictHints);
+		Log.d("KNN", Arrays.toString(nns));
 		for (int idx = 0; idx < nns.length; idx++) {
 			this.closestList[idx] = nns[idx].item;
+			/***************************debug***************************/
+			this.appendLog("making decisions:\n");			
+			this.appendLog("closest points: "+ nns[idx].toString()+"\n");
+			/***************************debug***************************/
 		}
 		updateWrongTimesAfterClassify(this.closestList, catResult);
 		// record label predicted
@@ -738,6 +777,38 @@ public class BasicKNN implements KNN{
 //		String[] hintsArray = allHints.toArray(new String[allHints.size()]);
 		return allHints;
 	}
+	
+	
+	/****************************** debug ***************************/
+	public void appendLog(String text)
+	{       
+	   File logFile = new File("/sdcard/PaperKeyboardLog/KNNlog.file");
+	   if (!logFile.exists())
+	   {
+	      try
+	      {
+	         logFile.createNewFile();
+	      } 
+	      catch (IOException e)
+	      {
+	         e.printStackTrace();
+	      }
+	   }
+	   try
+	   {
+	      //BufferedWriter for performance, true to set append to file flag
+	      BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true)); 
+	      buf.append(text);
+//	      buf.newLine();
+	      buf.close();
+	   }
+	   catch (IOException e)
+	   {
+	      e.printStackTrace();
+	   }
+	}
+	/****************************** debug ***************************/
+	
 }
 
 /**

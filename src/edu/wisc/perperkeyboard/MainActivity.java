@@ -45,7 +45,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	static final int STROKE_CHUNKSIZE = 2000;
 	private static final int SAMPLING_RATE= 48000;
 	private static final int CHANNEL_COUNT = 2;	
-	private static int TRAINNUM = 3; //how many keystroke we need to get for each key when training
+	private static int TRAINNUM = 5; //how many keystroke we need to get for each key when training
 	
 	public static BasicKNN mKNN;
 	private enum InputStatus {
@@ -56,7 +56,7 @@ public class MainActivity extends Activity implements RecBufListener{
 //	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 5 };
 //	private final int[] ExpectedInputNum = { 3, 1, 4, 11, 6 };
 //	private final int[] ExpectedInputNum = {4,1};
-	private final int[] ExpectedInputNum = {5};	
+	private final int[] ExpectedInputNum = {3};	
 	private InputStatus inputstatus;
 	private Set<InputStatus> elements;
 	Iterator<InputStatus> it; 
@@ -423,17 +423,18 @@ public class MainActivity extends Activity implements RecBufListener{
 	public void runAudioProcessing(short[] audioStroke) {
 		// get the audio features from this stroke and add it
 		// to the training set, do it in background
-//		short[] audioStroke = this.strokeBuffer;
 		// separate left and right channel
 		short[][] audioStrokeData = KeyStroke.seperateChannels(audioStroke);
-//		this.strokeBuffer=null;
+
 		
 		/******************log audio****************************/
 		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss");
 		Date date = new Date();
 		DecimalFormat df = new DecimalFormat("0.0000");
 		
-		String Name = "/sdcard/PaperKeyboardLog/"+"audio";//+ dateFormat.format(date);
+		String Name ="/sdcard/PaperKeyboardLog/"+"audio_"+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+ "_"+System.currentTimeMillis()/10;		
+
+		this.shortToPcm(audioStroke, Name);
 		File mFile_log = new File(Name);
 		FileOutputStream outputStream_log = null;
 		try {
@@ -443,11 +444,6 @@ public class MainActivity extends Activity implements RecBufListener{
 			}
 			outputStream_log = new FileOutputStream(mFile_log, false);
 			OutputStreamWriter osw = new OutputStreamWriter(outputStream_log);
-			String header = "paper keyboard test result: \n"
-					+ "file created time: " + dateFormat.format(date) + "\n";
-			osw.write(header);
-			String form = "totalAccuracy                 recentAccuracy\n";
-			osw.write(form);
 			for (int i = 0; i < audioStrokeData[0].length; i++) {
 				osw.write(String.valueOf(audioStrokeData[0][i])+"\n");	
 			}
@@ -461,13 +457,13 @@ public class MainActivity extends Activity implements RecBufListener{
 			// System.out.println("IOException occurs");
 			//return false;
 		}
+		/******************log audio****************************/		
 
 		// get features
 		double[] features = SPUtil.getAudioFeatures(audioStrokeData);
 
 		/******************log features****************************/
-		
-		Name = "/sdcard/PaperKeyboardLog/"+"feature";//+ dateFormat.format(date);
+		Name = "/sdcard/PaperKeyboardLog/"+"feature_"+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+ "_"+System.currentTimeMillis()/10;
 		mFile_log = new File(Name);
 		outputStream_log = null;
 		try {
@@ -480,22 +476,23 @@ public class MainActivity extends Activity implements RecBufListener{
 			String header = "paper keyboard test result: \n"
 					+ "file created time: " + dateFormat.format(date) + "\n";
 			osw.write(header);
-			String form = "totalAccuracy                 recentAccuracy\n";
-			osw.write(form);
+//			String form = "totalAccuracy                 recentAccuracy\n";
+			osw.write("feature start\n");
 			for (int i = 0; i < features.length; i++) {
-				osw.write(String.valueOf(features[i])+"\n");	
+				osw.write(String.valueOf(features[i]) + ",");	
 			}
+			osw.write("\nfeature stop\n");				
 			osw.flush();
 			osw.close();
 			osw = null;
 		} catch (FileNotFoundException e) {
-			// System.out.println("the directory doesn't exist!");
-			//return false;
+			 System.out.println("the directory doesn't exist!");
+//			return false;
 		} catch (IOException e) {
-			// System.out.println("IOException occurs");
+			 System.out.println("IOException occurs");
 			//return false;
 		}
-		
+		/******************log features****************************/		
 		
 		
 		
@@ -565,8 +562,37 @@ public class MainActivity extends Activity implements RecBufListener{
 	    } else {
 	    	Log.d(LTAG, "try to register gyro sensor. but there is no GyroHelper class used");
 	    }
-	  }	
+	  }
 
+	  
+	  /********************************** debug ****************************/	  
+	// Transfer Int array into Byte array
+	// little endian
+	// @param: int[] IntData
+	public byte[] shortToByte(short[] shortData) {
+		byte[] ret = new byte[shortData.length * 2];
+		int i = 0;
+		for (i = 0; i < shortData.length; i++) {
+			ret[i * 2] = (byte)(shortData[i] & 0xff);
+			ret[i * 2 + 1] = (byte)((shortData[i] >> 8) & 0xff);
+		}
+		return ret;
+	}
+
+	// Save int array into PCM file
+	//
+	public void shortToPcm(short[] shortData, String Name) {
+		byte[] buffer;
+		try {
+			buffer = this.shortToByte(shortData);
+			FileOutputStream fos = new FileOutputStream(Name + ".pcm");
+			fos.write(buffer, 0, buffer.length);
+			fos.close();
+		} catch (Exception e) {
+		}
+	}
+	  /********************************** debug ****************************/
+	
 }
 
 /**

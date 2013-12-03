@@ -36,14 +36,14 @@ public class Item {
 		//append wrong times
 		output.append("wrong:"+String.valueOf(this.wrongTimes)+"==");
 		int printSize=this.features.length;
-		if (printSize > 5)
-			printSize=5;
+		if (printSize > 10)
+			printSize=10;
 		for (int index=0;index<printSize;index++){
 			output.append(features[index]);
 			output.append(",");
 		}
 		//replace last "," with "\n"
-		output=output.replace(output.length()-1, output.length(), "\n");
+		output=output.replace(output.length()-1, output.length(), " ");
 		return output.toString();
 	}
 	
