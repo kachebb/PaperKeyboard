@@ -187,7 +187,7 @@ public class Statistic{
 			if(!mFile_log.exists()){
 				mFile_log.createNewFile();
 			}
-			outputStream_log = new FileOutputStream(mFile_log, true);
+			outputStream_log = new FileOutputStream(mFile_log, false);
 			OutputStreamWriter osw = new OutputStreamWriter(outputStream_log);
 			String header = "paper keyboard test result: \n"
 					+ "file created time: " + dateFormat.format(date) + "\n";
@@ -217,7 +217,7 @@ public class Statistic{
 			if(!mFile_log.exists()){
 				mFile_log.createNewFile();
 			}
-			outputStream_log = new FileOutputStream(mFile_log, true);
+			outputStream_log = new FileOutputStream(mFile_log, false);
 			OutputStreamWriter osw = new OutputStreamWriter(outputStream_log);
 			String header = "paper keyboard input rate result: \n"
 					+ "file created time: " + dateFormat.format(date) + "\n";
@@ -246,7 +246,7 @@ public class Statistic{
 				if(!mFile_log.exists()){
 					mFile_log.createNewFile();
 				}
-				outputStream_log = new FileOutputStream(mFile_log, true);
+				outputStream_log = new FileOutputStream(mFile_log, false);
 				OutputStreamWriter osw = new OutputStreamWriter(outputStream_log);
 				String header = "paper keyboard input rate result: \n"
 						+ "file created time: " + dateFormat.format(date) + "\n";
@@ -275,7 +275,7 @@ public class Statistic{
 				if(!mFile_log.exists()){
 					mFile_log.createNewFile();
 				}
-				outputStream_log = new FileOutputStream(mFile_log, true);
+				outputStream_log = new FileOutputStream(mFile_log, false);
 				OutputStreamWriter osw = new OutputStreamWriter(outputStream_log);
 				String header = "paper keyboard test all operates log: \n"
 						+ "file created time: " + dateFormat.format(date) + "\n";

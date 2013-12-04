@@ -66,7 +66,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private String previousKey = "";
 	private boolean halt = false;
 	private boolean clickOnceAndSame = false;
-	private int CLASSIFY_K = 3;
+	private int CLASSIFY_K = 1;
 	private volatile List<Button> hintButtonList;
 	
 	/********************Shift and caps*****************************/
@@ -298,7 +298,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K,hintsFromDict);
 		this.previousKey =  detectResult;		
 		//add unsure sample to staging area
-		//mKNN.addToStage(detectResult, features);
+		mKNN.addToStage(detectResult, features);
 		
 		/**********statistic***************/
 		stat.addInput(0,detectResult); //we suppose the input is correct		

@@ -34,7 +34,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
 	public static final int STROKE_CHUNKSIZE = 2000;
-	private static int TRAINNUM = 10; //how many keystroke we need to get for each key when training 
+	private static int TRAINNUM = 3; //how many keystroke we need to get for each key when training 
 	public static BasicKNN mKNN;
 	private enum InputStatus {
 		AtoZ, //NUM, LEFT, RIGHT, BOTTOM
@@ -44,7 +44,7 @@ public class MainActivity extends Activity implements RecBufListener{
 //	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 5 };
 //	private final int[] ExpectedInputNum = { 3, 1, 4, 11, 6 };
 //	private final int[] ExpectedInputNum = {4,1};
-	private final int[] ExpectedInputNum = {6};	
+	private final int[] ExpectedInputNum = {26};	
 	private InputStatus inputstatus;
 	private Set<InputStatus> elements;
 	Iterator<InputStatus> it; 
