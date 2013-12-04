@@ -25,7 +25,7 @@ public class BasicKNN implements KNN{
 	List<Item> trainingSet;
 	Item[] closestList;
 	public final int DISTTHRE = 1;
-	private int trainingSize = 5; // number of training samples to keep for each
+	private int trainingSize = 10; // number of training samples to keep for each
 									// category. default 5
 	private Item staged;
 	// sorted item's categories given distance. updated each time when classify
@@ -406,7 +406,7 @@ public class BasicKNN implements KNN{
 		double result = 0.0;
 		for (int i = 0; i < item1.features.length; i++) {
 			double value = (item1.features[i] - item2.features[i]);
-			result += value * value / this.variances[i];
+			result += value * value;// / this.variances[i];
 		}
 		result = Math.sqrt(result);
 		return result;
