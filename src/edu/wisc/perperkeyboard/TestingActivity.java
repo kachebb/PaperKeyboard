@@ -37,7 +37,7 @@ import edu.wisc.jj.SPUtil;
 public class TestingActivity extends Activity implements RecBufListener{
 	/*************constant values***********************/
 	private static final String LTAG = "testing activity debug";
-	private static final int STROKE_CHUNKSIZE = 2000;
+	private static int STROKE_CHUNKSIZE;
 	
 	/*************UI ********************************/
 	private TextView text;
@@ -51,6 +51,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private ToggleButton ShiftButton;
 	private ToggleButton CapsButton;
 	private TextView recentAccuracyText;
+	private Button dictButton;
 	/*************Audio Processing*******************/
 	private BasicKNN mKNN;
 	private boolean inStrokeMiddle;
@@ -75,7 +76,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private Statistic stat;	
 	
 	/********************gyro helper**************************/
-	private GyroHelper mGyro;
+	private static GyroHelper mGyro;
 
 	/********************dictionary**************************/
 	private Dictionary mDict;
@@ -100,11 +101,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 		ShiftButton = (ToggleButton) findViewById(R.id.toggle_shift);
 		CapsButton = (ToggleButton) findViewById(R.id.toggle_caps);
 		recentAccuracyText = (TextView) findViewById(R.id.text_recentAccuracy);
-	
+		dictButton = (Button) findViewById(R.id.button_Dict);
 		editText.setOnClickListener(new View.OnClickListener() {
 		    @Override
 		    public void onClick(View v) {
-		    	halt = true;
+		   // 	halt = true;
 		    }
 		});
 		editText.setOnEditorActionListener(new OnEditorActionListener() {
@@ -140,9 +141,12 @@ public class TestingActivity extends Activity implements RecBufListener{
 		text.setText("Training Size:"+String.valueOf(mKNN.getTrainingSize()));
 		debugKNN.setText(mKNN.getChars());
 		showDetectResult = new ArrayList<String>();
-		dictStatus = true;
+		dictStatus = false;
+		if(dictStatus)
+			dictButton.setText("Using Dict");
+		else dictButton.setText("Non-Dict");
 		
-		
+		this.STROKE_CHUNKSIZE = MainActivity.STROKE_CHUNKSIZE;
 		/****************Init RecBuffer and thread*****************/
 		mBuffer = new RecBuffer();
 		recordingThread = new Thread(mBuffer);
@@ -158,7 +162,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		
 		/********************gyro helper**************************/				
 		this.mGyro=new GyroHelper(this.getApplicationContext());
-		
+		this.mGyro.GYRO_DESK_THRESHOLD = MainActivity.mGyro.GYRO_DESK_THRESHOLD;
 		/********************dictionary**************************/
 		//use dict_2of12inf in resource/raw folder
 		this.mDict=new Dictionary(getApplicationContext(), R.raw.dict_2of12inf);
@@ -195,6 +199,10 @@ public class TestingActivity extends Activity implements RecBufListener{
 	 */
 	@SuppressLint("NewApi")
 	public void onRecBufFull(short[] data) {
+		
+		/*******************smooth the data******************/
+		SPUtil.smooth(data);
+		
 		/*********************check whether gyro agrees that there is a key stroke *******************/
 		long curTime=System.nanoTime();
 		//first case: screen is being touched
@@ -290,7 +298,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K,hintsFromDict);
 		this.previousKey =  detectResult;		
 		//add unsure sample to staging area
-		mKNN.addToStage(detectResult, features);
+		//mKNN.addToStage(detectResult, features);
 		
 		/**********statistic***************/
 		stat.addInput(0,detectResult); //we suppose the input is correct		

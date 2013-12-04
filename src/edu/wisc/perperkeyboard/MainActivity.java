@@ -33,7 +33,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	/**********constant values****************/
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
-	private static final int STROKE_CHUNKSIZE = 2000;
+	public static final int STROKE_CHUNKSIZE = 2000;
 	private static int TRAINNUM = 3; //how many keystroke we need to get for each key when training 
 	public static BasicKNN mKNN;
 	private enum InputStatus {
@@ -44,7 +44,7 @@ public class MainActivity extends Activity implements RecBufListener{
 //	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 5 };
 //	private final int[] ExpectedInputNum = { 3, 1, 4, 11, 6 };
 //	private final int[] ExpectedInputNum = {4,1};
-	private final int[] ExpectedInputNum = {26};	
+	private final int[] ExpectedInputNum = {5};	
 	private InputStatus inputstatus;
 	private Set<InputStatus> elements;
 	Iterator<InputStatus> it; 
@@ -70,7 +70,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	private int TrainedNum = 0;  // for each key, how many key stroke we have collected
 	
 	/***********************gyro helper********************/
-	private GyroHelper mGyro;
+	public static GyroHelper mGyro;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -185,6 +185,9 @@ public class MainActivity extends Activity implements RecBufListener{
 	@Override
 	public void onRecBufFull(short[] data) {
 //		Log.d(LTAG, "inside onRecBuf full");
+		/*******************smooth the data******************/
+		SPUtil.smooth(data);
+		
 		/*********************check whether gyro agrees that there is a key stroke *******************/
 		long curTime=System.nanoTime();
 		//first case: screen is being touched
@@ -377,6 +380,30 @@ public class MainActivity extends Activity implements RecBufListener{
 		mKNN.addTrainingItem(
 				trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx),
 				features);
+		
+		//training order each key several times
+		TrainedNum ++;
+        if(TrainedNum == TRAINNUM){
+                this.curTrainingItemIdx++;        
+                TrainedNum = 0;
+                if (this.ExpectedInputNum[inputstatus.ordinal()] == this.curTrainingItemIdx){
+                        if(it.hasNext())
+                        {
+                                inputstatus = it.next();
+                                Log.d(LTAG, "change to next character. next char: "+inputstatus);                                
+                                //curTrainingItemIdx  = 0;
+                                TrainedNum = 0;
+        
+                        }
+                        else{
+                                        this.finishedTraining=true;
+                                        //kill recording thread (myself)
+                                        recordingThread.interrupt();
+                        }
+                }
+        } 
+		//training order alphabetical
+		/*
 		curTrainingItemIdx++;		
 		if (this.ExpectedInputNum[inputstatus.ordinal()] == this.curTrainingItemIdx){
 			if(it.hasNext())
@@ -399,7 +426,7 @@ public class MainActivity extends Activity implements RecBufListener{
 					curTrainingItemIdx = 0;
 				}
 			}
-		} 
+		} */
 		//update UI
 		this.runOnUiThread(new Runnable() {
 			@Override

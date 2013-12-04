@@ -89,3 +89,18 @@ Nov 15th
 2. disable screen sleep
 3. Add a textview to show what is in the mKNN
 4. Set the RecBuffer size to 10000.
+
+
+Dec 4th
+1. dictionary and online adaptation of training set is disabled
+2. FREQ_FEATURE_SZ=300
+This parameter is very important.  I found with FFT size equal to
+4096, only the first 150 samples on each microphone are consistent for
+each key.  The remaining are fairly random.
+3. STROKE_CHUNKSIZE = 2000
+4. Training set size and initial training num set to 10
+5. Hanning window disabled
+6. FFT size set to 4096, with zero patching (since keystroke duration
+is shorter than fft size)
+7. smooth the curve before detecting
+8. euclidian distance instead of standard Euclidian

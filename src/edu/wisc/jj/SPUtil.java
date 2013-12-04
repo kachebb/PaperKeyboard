@@ -16,9 +16,9 @@ import android.util.Log;
 public class SPUtil {
 	// hardCoded the sampling rate 48000Hz
 	public static final int SAMPLING_RATE = 48000;
-	private static final int FREQ_FEATURE_SZ = 200; // number of frequency bins used as features. targeting <5k hz
+	private static final int FREQ_FEATURE_SZ = 300; // number of frequency bins used as features. targeting <5k hz
 	private static final String LTAG = "jj-dspUtil";	
-	
+	private final static int FFTSIZE = 4096;
 	/**
 	 * get MFCC coefficients from fft spectrum
 	 * 
@@ -63,10 +63,11 @@ public class SPUtil {
 	 *         storage because of the symmetry of fft
 	 */
 	public static double[] fft(double[] data, boolean useWindowFunction) {
-		double[] fftInput = new double[data.length];
+		double[] fftInput = new double[FFTSIZE];//new double[data.length];
 		if (useWindowFunction) {
-			int windowSize = data.length;
-			double[] windowedInput = applyWindowFunc(data, hanning(windowSize));
+			//int windowSize = data.length;
+			//double[] windowedInput = applyWindowFunc(data, hanning(windowSize));
+			double[] windowedInput = data;
 			System.arraycopy(windowedInput, 0, fftInput, 0,
 					windowedInput.length);
 		} else {
@@ -216,5 +217,20 @@ public class SPUtil {
 		}
 		return h_wnd;
 	}
-
+	
+	   /**
+     * smooth the curve
+     */
+    public static void smooth(short[] data){
+            /*********************smoothy the curve*****************************************/
+            final double ALPHA = 0.05;
+            int i;
+            for(i= 0;i < data.length;i++){
+                    if(i == 0 || i==1)
+                            continue;
+                    else{
+                            data[i] = (short)((1-ALPHA)*(double)data[i-2]+ ALPHA*(double)data[i]);
+                    }
+            }
+    }
 }
