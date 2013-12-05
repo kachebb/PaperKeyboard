@@ -82,7 +82,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private Dictionary mDict;
 	//use WORD_SPLITTER to separate words from words
 	//should be " ". right now for training simplicity, used an arbitrary character
-	private static final String WORD_SPLITTER = "a";	
+	private static final String WORD_SPLITTER = " ";	
 	private boolean dictStatus = true;
 	
 	@SuppressLint("NewApi")
@@ -462,10 +462,14 @@ public class TestingActivity extends Activity implements RecBufListener{
 	 */
 	public void onClickButtonBackSpace(View view) {
 		int len = charas.length();
+		//deal with KNN
+		mKNN.removeLatestInput();
+		
+		//deal with UI
 		if(len > 0)
 			charas = charas.substring(0, len-1);
 		int len1 = showDetectResult.size();
-		if(len > 0)
+		if(len1 > 0)
 			showDetectResult.remove(len1-1);
 		updateUI();
 		stat.addInput(3, "backspace");

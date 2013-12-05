@@ -292,6 +292,40 @@ public class MainActivity extends Activity implements RecBufListener{
 	}
 	
 	public void onClickClear(View view){
+			     //remove latest input
+	     if(curTrainingItemIdx == 0 && TrainedNum == 0){ //means we just got to new input stage
+	       //find previous stage
+	       Set<InputStatus> tempelements =  EnumSet.allOf(InputStatus.class);;
+	       Iterator<InputStatus> newit = elements.iterator();
+	       Iterator<InputStatus> previousIt = null;
+	       while(newit.hasNext()){
+	         if (newit.hashCode() == it.hashCode() && previousIt != null)
+	         {
+	           it = previousIt;
+	           curTrainingItemIdx = ExpectedInputNum[inputstatus.ordinal()]-1;
+	           TrainedNum = TRAINNUM-1;
+	           mKNN.removeLatestInput();
+	           break;
+	         }
+	         newit.next();
+	       }
+	    }else if(TrainedNum == 0){ // means we just got to new input key, but not the first key of input stage
+	      curTrainingItemIdx --;
+	       TrainedNum = TRAINNUM -1;
+	      mKNN.removeLatestInput();
+	     }else{
+	       TrainedNum --;
+	       mKNN.removeLatestInput();
+	     }
+	     //show new info
+	     text.setText(inputstatus.toString()  + "is recording. " + "\n"
+	         + "current training: "
+	         + trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
+	         + String.valueOf(TRAINNUM - TrainedNum) + "left");
+	     debugKNN.setText(mKNN.getChars());	
+	
+	    /*	     
+		/////////////////Each Key Several Times////////////////////
 		//remove latest input
 		if(curTrainingItemIdx == 0){ //means we just got to new input stage
 			//find previous stage
@@ -336,7 +370,7 @@ public class MainActivity extends Activity implements RecBufListener{
 				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
 				+ String.valueOf(TRAINNUM - TrainedNum) + "left");
 		debugKNN.setText(mKNN.getChars());
-	
+	*/
 	}
 	
 	public void onClickRestart(View view){
