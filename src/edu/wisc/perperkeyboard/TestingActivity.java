@@ -70,7 +70,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private volatile List<Button> hintButtonList;
 	
 	/********************Shift and caps*****************************/
-	private boolean shift;
+	private int shift;
 	private boolean caps;
 	/********************statistics**************************/
 	private Statistic stat;	
@@ -306,9 +306,10 @@ public class TestingActivity extends Activity implements RecBufListener{
 		
 		/**********caps and shift*******/
 		//set shift and caps condition
-		this.shift = false; //clear shift after use
+		if(this.shift>0)
+			this.shift --; //clear shift after use
 		if(detectResult.equals("LShift") || detectResult.equals("RShift")){
-			this.shift = true;
+			this.shift = 2;
 		}
 		if(detectResult.equals("Caps")){
 			this.caps = !this.caps;
@@ -364,7 +365,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 							
 							/*******if false recognition result is shift or caps**************/
 							if(detectResult.equals("LShift") || detectResult.equals("RShift")){
-								shift = false;
+								shift = 0;
 							}
 							if(detectResult.equals("Caps")){
 								caps = !caps;
@@ -373,7 +374,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 							/******if new correction input is shift or caps**********/
 							if(((Button)v).getText().toString().equals("LShift")
 									|| ((Button)v).getText().toString().equals("RShift"))
-								shift = true;
+								shift = 2;
 							if(((Button)v).getText().toString().equals("Caps"))
 								caps = true;
 							
@@ -508,7 +509,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		String detectResult = newData;
 		CapTrans cap = new CapTrans();
 		if(this.caps){
-			if(!this.shift){
+			if(this.shift == 0){
 				charas+= cap.transWhenCaps(detectResult);
 				showDetectResult.add(cap.transWhenCaps(detectResult));
 			}else {
@@ -516,7 +517,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 				showDetectResult.add(detectResult);
 			}
 		}else{
-			if(this.shift){
+			if(this.shift == 1){
 				showDetectResult.add(cap.transWhenCaps(detectResult));
 				charas+= cap.transWhenCaps(detectResult);
 			}
@@ -536,7 +537,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		text.setText(showDetectResult.toString());
 		totalInputText.setText(String.valueOf(this.stat.totalInputTimes));
 		totalAccuracyText.setText(String.valueOf(this.stat.totalAccuracy * 100) + "%");
-		if(shift){
+		if(shift == 2){
 			//ShiftButton.animate();
 			ShiftButton.setChecked(true);
 		}

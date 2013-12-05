@@ -37,14 +37,14 @@ public class MainActivity extends Activity implements RecBufListener{
 	private static int TRAINNUM = 3; //how many keystroke we need to get for each key when training 
 	public static BasicKNN mKNN;
 	private enum InputStatus {
-		AtoZ, //NUM, LEFT, RIGHT, BOTTOM
+		AtoZ, NUM, LEFT, RIGHT, BOTTOM
 	}
 	/****to track input stage*************/
 	// expected chunk number in each stage
-//	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 5 };
+	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 5 };
 //	private final int[] ExpectedInputNum = { 3, 1, 4, 11, 6 };
 //	private final int[] ExpectedInputNum = {4,1};
-	private final int[] ExpectedInputNum = {26};	
+	//private final int[] ExpectedInputNum = {26};	
 	private InputStatus inputstatus;
 	private Set<InputStatus> elements;
 	Iterator<InputStatus> it; 
@@ -416,24 +416,24 @@ public class MainActivity extends Activity implements RecBufListener{
 				features);
 		
 		//training order each key several times
-		TrainedNum ++;
-        if(TrainedNum == TRAINNUM){
-                this.curTrainingItemIdx++;        
+        TrainedNum ++;
+        if(TrainedNum == TRAINNUM)
+        {
+                curTrainingItemIdx++;
                 TrainedNum = 0;
-                if (this.ExpectedInputNum[inputstatus.ordinal()] == this.curTrainingItemIdx){
-                        if(it.hasNext())
-                        {
-                                inputstatus = it.next();
-                                Log.d(LTAG, "change to next character. next char: "+inputstatus);                                
-                                //curTrainingItemIdx  = 0;
-                                TrainedNum = 0;
+        }
         
-                        }
-                        else{
-                                        this.finishedTraining=true;
-                                        //kill recording thread (myself)
-                                        recordingThread.interrupt();
-                        }
+        if (this.ExpectedInputNum[inputstatus.ordinal()] == this.curTrainingItemIdx){
+                if(it.hasNext())
+                {
+                        inputstatus = it.next();
+                        Log.d(LTAG, "change to next character. next char: "+inputstatus);                                
+                        curTrainingItemIdx  = 0;
+                }
+                else{
+                        this.finishedTraining=true;
+                        //kill recording thread (myself)
+                        recordingThread.interrupt();
                 }
         } 
 		//training order alphabetical
@@ -517,8 +517,8 @@ class addTrainingItem {
 	{
 		ArrayList<String> AtoZArray = new ArrayList<String>();
 		//TODO This is only used for debug
-//		AtoZArray.add("LShift");
-//		AtoZArray.add("Caps");
+		AtoZArray.add("LShift");
+		AtoZArray.add("Caps");
 		// add characters into training item
 		for (int idx = 0; idx < 26; idx++)
 			AtoZArray.add(String.valueOf((char)('a' + idx)));
