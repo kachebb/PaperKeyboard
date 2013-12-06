@@ -463,12 +463,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 	 */
 	public void onClickButtonBackSpace(View view) {
 		int len = charas.length();
-		//deal with KNN
-		mKNN.removeLatestInput();
-		
+		//deal with KNN		
 		//deal with UI
 		if(len > 0)
 			charas = charas.substring(0, len-1);
+			mKNN.removeLatestInput();
 		int len1 = showDetectResult.size();
 		if(len1 > 0)
 			showDetectResult.remove(len1-1);

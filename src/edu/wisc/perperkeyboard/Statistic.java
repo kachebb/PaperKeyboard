@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.concurrent.locks.Lock;
 
 public class Statistic{
-	private final int RECENTSIZE = 20;	
+	private final int RECENTSIZE = 50;	
 	/**********for accuracy*****************/
 	public volatile int totalInputTimes;
 	private volatile int totalErrorTimes;
@@ -38,8 +38,10 @@ public class Statistic{
 	private long startTime;
 	private List<Double> inputRatesList;
 	private int lastInputTimes;
-	private final int inputRateUpdateTime = 2000;
-	
+	private final int inputRateUpdateTime = 30000;
+	private static int count = 0;
+	private List<Integer> recentInputNumbers;
+	private final int inputCountTime = 30;  //50 times inputRateUpdateTimes
 	/************for log*******************/
 	class Operation{
 		int op;
@@ -55,10 +57,16 @@ public class Statistic{
 	        try {
 	            while(true) {
 	                Thread.sleep(inputRateUpdateTime);
-	                synchronized(this){      
+	                count++;
+	                synchronized(this){ 
+                		recentInputNumbers.add(totalInputTimes);
+	                	//if(count == inputCountTime){
+	                	//inputRate = ((double)totalInputTimes - (double)recentInputNumbers.get(0))/(double)inputRateUpdateTime*1000/;
+	                	
 		                inputRate = ((double)totalInputTimes-(double)lastInputTimes)/(double)inputRateUpdateTime*1000;
 		                inputRatesList.add(inputRate);
 		                lastInputTimes = totalInputTimes;
+		                
 	                }
 	            }
 	        } catch (InterruptedException e) {
@@ -77,6 +85,7 @@ public class Statistic{
 		inputRatesList = new ArrayList<Double>();
 		operationList = new ArrayList<Operation>();
 		correctionList = new ArrayList<Integer>();
+		recentInputNumbers = new ArrayList<Integer>();
 		totalInputTimes = 0;
 		totalErrorTimes = 0;
 		lastInputTimes = 0;
@@ -134,9 +143,13 @@ public class Statistic{
 			operationList.add(operate);
 		}else if(op == 3){ //user click backspace
 			correctionTimes ++;
-			operate.op = op;
-			operate.value = re;
-			operationList.add(operate);
+			synchronized(this){
+				if(totalInputTimes>0)
+					totalInputTimes--; 
+				operate.op = op;
+				operate.value = re;
+				operationList.add(operate);
+			}
 		}
 		calculateAccuracy();
 		if(op == 1 || op == 2){
