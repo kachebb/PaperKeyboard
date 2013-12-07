@@ -239,12 +239,9 @@ public class MainActivity extends Activity implements RecBufListener{
 				this.strokeSamplesLeft = 0;
 				this.strokeBuffer= Arrays.copyOf(this.strokeBuffer,
 						STROKE_CHUNKSIZE * 2);
-				// get the audio features from this stroke and add it to the
-				// training set, do it in background
+				
 				this.runAudioProcessing();				
-//				Log.d(LTAG, "key stroke, data length >= samples left "
-//						+ " stroke data length: " + String.valueOf(data.length)
-//						+ " stroke samples left " + this.strokeSamplesLeft);
+
 			} else { // if the length is smaller than the needed sample left
 				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
 						- 1 - strokeSamplesLeft, data.length);

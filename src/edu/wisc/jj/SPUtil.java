@@ -65,7 +65,7 @@ public class SPUtil {
 	public static double[] fft(double[] data, boolean useWindowFunction) {
 		double[] fftInput = new double[FFTSIZE];//new double[data.length];
 		if (useWindowFunction) {
-			//int windowSize = data.length;
+		//int windowSize = data.length;
 			//double[] windowedInput = applyWindowFunc(data, hanning(windowSize));
 			double[] windowedInput = data;
 			System.arraycopy(windowedInput, 0, fftInput, 0,
