@@ -32,12 +32,14 @@
          android:layout_width="fill_parent"
          android:layout_height="wrap_content"
          android:layout_alignParentLeft="true"
+         android:layout_below="@id/text_detection"
+         android:layout_marginBottom="3dp"
+         android:layout_marginTop="3dp"
          android:layout_toLeftOf="@+id/text_inputHint"
-      	 android:layout_below="@id/text_detection"
-         android:gravity="left"      	 
-      	 android:layout_marginBottom="3dp"
-      	 android:layout_marginTop="3dp"
+         android:gravity="left"
          android:hint="@string/detectionResult"
+         android:scrollbarAlwaysDrawVerticalTrack="true"
+         android:scrollbars="vertical"
          android:textSize="18sp"
          android:textStyle="bold" />
 
@@ -131,7 +133,7 @@
      <Button
 	    android:id="@+id/button_Dict"
 	    android:layout_toRightOf="@id/inputChar"
-	    android:layout_toLeftOf="@+id/backSpace"
+	   
         android:layout_width="wrap_content"
         android:layout_height = "wrap_content"
         android:layout_gravity = "center"
@@ -144,6 +146,7 @@
 	    android:id="@+id/backSpace"
 	 
 	    android:layout_toLeftOf="@+id/button_finish"
+	    android:layout_toRightOf="@+id/button_Dict"
         android:layout_width="wrap_content"
         android:layout_height = "wrap_content"
         android:layout_gravity = "center"

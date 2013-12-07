@@ -17,6 +17,7 @@ public class SPUtil {
 	// hardCoded the sampling rate 48000Hz
 	public static final int SAMPLING_RATE = 48000;
 	private static final int FREQ_FEATURE_SZ = 300; // number of frequency bins used as features. targeting <5k hz
+
 	private static final String LTAG = "jj-dspUtil";	
 	private final static int FFTSIZE = 4096;
 	/**
@@ -63,24 +64,45 @@ public class SPUtil {
 	 *         storage because of the symmetry of fft
 	 */
 	public static double[] fft(double[] data, boolean useWindowFunction) {
-		double[] fftInput = new double[FFTSIZE];//new double[data.length];
-		if (useWindowFunction) {
-			//int windowSize = data.length;
-			//double[] windowedInput = applyWindowFunc(data, hanning(windowSize));
-			double[] windowedInput = data;
-			System.arraycopy(windowedInput, 0, fftInput, 0,
-					windowedInput.length);
-		} else {
-			System.arraycopy(data, 0, fftInput, 0, data.length);
-		}
-		int dataLength = fftInput.length;
-		RealDoubleFFT ftEngine = new RealDoubleFFT(dataLength);
-		// coefficient returned: 0 -- 0th bin(real,0); 1,2 -- 1th
-		// bin(real,imag); 3,4 -- 2th bin(real,imag)....
-		// for even, n -- n/2 bin(real,0)
-		ftEngine.ft(fftInput);
-		// get the maginude from FFT coefficients
-		double[] spectrum;
+//		double[] fftInput = new double[FFTSIZE];//new double[data.length];
+//		if (useWindowFunction) {
+//			//int windowSize = data.length;
+//			//double[] windowedInput = applyWindowFunc(data, hanning(windowSize));
+//			double[] windowedInput = data;
+//			System.arraycopy(windowedInput, 0, fftInput, 0,
+//					windowedInput.length);
+//		} else {
+//			System.arraycopy(data, 0, fftInput, 0, data.length);
+//		}
+//		int dataLength = fftInput.length;
+//		RealDoubleFFT ftEngine = new RealDoubleFFT(dataLength);
+//		// coefficient returned: 0 -- 0th bin(real,0); 1,2 -- 1th
+//		// bin(real,imag); 3,4 -- 2th bin(real,imag)....
+//		// for even, n -- n/2 bin(real,0)
+//		ftEngine.ft(fftInput);
+//		// get the maginude from FFT coefficients
+//		double[] spectrum;
+
+		
+		
+		double[] fftInput = new double[data.length];
+        if (useWindowFunction) {
+                int windowSize = data.length;
+                double[] windowedInput = applyWindowFunc(data, hanning(windowSize));
+                System.arraycopy(windowedInput, 0, fftInput, 0,
+                                windowedInput.length);
+        } else {
+                System.arraycopy(data, 0, fftInput, 0, data.length);
+        }
+        int dataLength = fftInput.length;
+        RealDoubleFFT ftEngine = new RealDoubleFFT(dataLength);
+        // coefficient returned: 0 -- 0th bin(real,0); 1,2 -- 1th
+        // bin(real,imag); 3,4 -- 2th bin(real,imag)....
+        // for even, n -- n/2 bin(real,0)
+        ftEngine.ft(fftInput);
+        // get the maginude from FFT coefficients
+        double[] spectrum;		
+
 		if (dataLength % 2 != 0) {// if odd
 			spectrum = new double[(dataLength + 1) / 2];
 			spectrum[0] = Math.pow(fftInput[0] * fftInput[0], 0.5);// dc
@@ -142,10 +164,20 @@ public class SPUtil {
 	 */
 	public static double[] getAudioFeatures(short[][] data){
 		double[] leftData=SPUtil.shortArrayToDouble(data[0]);
-		double[] rightData=SPUtil.shortArrayToDouble(data[1]);		
-		//get fft
-		double[] leftFFT=SPUtil.fft(leftData, true);
-		double[] rightFFT=SPUtil.fft(rightData, true);
+		double[] rightData=SPUtil.shortArrayToDouble(data[1]);
+		
+		/*************** pad 0s before doing fft ****************/
+		double[] leftData0Pad=new double[FFTSIZE];
+		double[] rightData0Pad=new double[FFTSIZE];
+		for (int i=0;i<leftData0Pad.length;i++){
+			leftData0Pad[i]=0;
+			rightData0Pad[i]=0;			
+		}
+		System.arraycopy(leftData, 0, leftData0Pad, 1048, leftData.length);
+		System.arraycopy(leftData, 0, rightData0Pad, 1048, rightData.length);		
+		//get fft. now window function
+		double[] leftFFT=SPUtil.fft(leftData0Pad, false);
+		double[] rightFFT=SPUtil.fft(rightData0Pad, false);
 		double[] features=null;
 		if (leftFFT.length!=rightFFT.length){
 			Log.e(LTAG,"length of left channel fft values is different from length of right channel");
@@ -218,19 +250,21 @@ public class SPUtil {
 		return h_wnd;
 	}
 	
-	   /**
-     * smooth the curve
-     */
-    public static void smooth(short[] data){
-            /*********************smoothy the curve*****************************************/
-            final double ALPHA = 0.05;
-            int i;
-            for(i= 0;i < data.length;i++){
-                    if(i == 0 || i==1)
-                            continue;
-                    else{
-                            data[i] = (short)((1-ALPHA)*(double)data[i-2]+ ALPHA*(double)data[i]);
-                    }
-            }
-    }
+	
+
+	/**
+	 * smooth the curve
+	 */
+	public static void smooth(short[] data){
+		/*********************smoothy the curve*****************************************/
+		final double ALPHA = 0.05;
+		int i;
+		for(i= 0;i < data.length;i++){
+			if(i == 0 || i==1)
+				continue;
+			else{
+				data[i] = (short)((1-ALPHA)*(double)data[i-2]+ ALPHA*(double)data[i]);
+			}
+		}
+	}
 }

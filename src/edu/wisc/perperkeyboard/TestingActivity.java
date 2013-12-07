@@ -5,6 +5,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,6 +14,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -37,7 +39,11 @@ import edu.wisc.jj.SPUtil;
 public class TestingActivity extends Activity implements RecBufListener{
 	/*************constant values***********************/
 	private static final String LTAG = "testing activity debug";
+
 	private static int STROKE_CHUNKSIZE;
+	private static final int SAMPLING_RATE= 48000;
+	private static final int CHANNEL_COUNT = 2;	
+
 	
 	/*************UI ********************************/
 	private TextView text;
@@ -52,13 +58,15 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private ToggleButton CapsButton;
 	private TextView recentAccuracyText;
 	private Button dictButton;
+
 	/*************Audio Processing*******************/
 	private BasicKNN mKNN;
-	private boolean inStrokeMiddle;
-	private int strokeSamplesLeft;
+//	private boolean inStrokeMiddle;
+//	private int strokeSamplesLeft;
 	private Thread recordingThread;
 	private RecBuffer mBuffer ;	
-	private short[] strokeBuffer;
+	private AudioBuffer strokeAudioBuffer;
+//	private short[] strokeBuffer;
 
 	/************self-correction and online training control**************/
 	private int clickTimes = 0;
@@ -79,7 +87,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private static GyroHelper mGyro;
 
 	/********************dictionary**************************/
-	private Dictionary mDict;
+	private static Dictionary mDict;
 	//use WORD_SPLITTER to separate words from words
 	//should be " ". right now for training simplicity, used an arbitrary character
 	private static final String WORD_SPLITTER = " ";	
@@ -89,6 +97,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
 		/************init UI************************/
 		setContentView(R.layout.activity_testing);
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
@@ -140,8 +149,9 @@ public class TestingActivity extends Activity implements RecBufListener{
 		mKNN = MainActivity.mKNN;
 		text.setText("Training Size:"+String.valueOf(mKNN.getTrainingSize()));
 		debugKNN.setText(mKNN.getChars());
-		showDetectResult = new ArrayList<String>();
+		showDetectResult = Collections.synchronizedList(new ArrayList<String>());
 		dictStatus = false;
+
 		if(dictStatus)
 			dictButton.setText("Using Dict");
 		else dictButton.setText("Non-Dict");
@@ -160,12 +170,15 @@ public class TestingActivity extends Activity implements RecBufListener{
 		text.requestFocus();
 		stat = new Statistic(System.currentTimeMillis());
 		
+		/****************audio buffer to store key strokes*****************/
+		this.strokeAudioBuffer=new AudioBuffer(SAMPLING_RATE,CHANNEL_COUNT,STROKE_CHUNKSIZE);
+		
 		/********************gyro helper**************************/				
-		this.mGyro=new GyroHelper(this.getApplicationContext());
-		this.mGyro.GYRO_DESK_THRESHOLD = MainActivity.mGyro.GYRO_DESK_THRESHOLD;
+		mGyro=new GyroHelper(this.getApplicationContext());
+		mGyro.GYRO_DESK_THRESHOLD = MainActivity.mGyro.GYRO_DESK_THRESHOLD;
 		/********************dictionary**************************/
 		//use dict_2of12inf in resource/raw folder
-		this.mDict=new Dictionary(getApplicationContext(), R.raw.dict_2of12inf);
+		mDict=new Dictionary(getApplicationContext(), R.raw.dict_2of12inf);
 	}
 
 
@@ -199,9 +212,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 	 */
 	@SuppressLint("NewApi")
 	public void onRecBufFull(short[] data) {
+		/*********************smoothy the curve*****************************************/		
+		SPUtil.smooth(data);		
 		
-		/*******************smooth the data******************/
-		SPUtil.smooth(data);
+		/**************** put recording to buffer ********************/
+		this.strokeAudioBuffer.add(data);
 		
 		/*********************check whether gyro agrees that there is a key stroke *******************/
 		long curTime=System.nanoTime();
@@ -209,74 +224,69 @@ public class TestingActivity extends Activity implements RecBufListener{
 		if (Math.abs(curTime-this.mGyro.lastTouchScreenTime) < mGyro.TOUCHSCREEN_TIME_INTERVAL){
 			Log.d("onRecBufFull", "screen touch detected nearby");
 			return;
-		//2nd case: there is indeed some vibrations on the desk			
-		} else if (Math.abs(curTime-this.mGyro.lastTouchDeskTime) >= mGyro.DESK_TIME_INTERVAL){ 
-//			Log.d("onRecBufFull", "no desk vibration feeled. not valid audio data. lastTouchDesktime: "+this.mGyro.lastTouchDeskTime + " .current time: "+curTime);
-			return;
-		}
+		} 
 		
-		if (!this.inStrokeMiddle) { // if not in the middle of a stroke
-			int startIdx = KeyStroke.detectStroke_threshold(data);
-			if (-1 == startIdx) { // when there is no stroke
+		/*****************when gyro feels some shake on the desk,check audio hints******/
+		//if there is such an audio data ready for processing
+		if (this.strokeAudioBuffer.hasKeyStrokeData()){
+			//check whether gyro agrees or not
+			// this assumption holds, since we are using 2000 
+			// data samples, (40ms) gyro will be updated around 4 times 
+			if (Math.abs(curTime-this.mGyro.lastTouchDeskTime) >= mGyro.DESK_TIME_INTERVAL){ 
+				Log.d("onRecBufFull", "no desk vibration feeled. not valid audio data. lastTouchDesktime: "+this.mGyro.lastTouchDeskTime + " .current time: "+curTime);
+				this.strokeAudioBuffer.clearValidIdx();
 				return;
-			} else { // there is an stroke
-				// this whole stroke is inside current buffer
-				if (data.length - startIdx >= STROKE_CHUNKSIZE * 2) {
-					this.inStrokeMiddle = false;
-					this.strokeSamplesLeft = 0;
-					this.strokeBuffer = Arrays.copyOfRange(data, startIdx,
-							startIdx + STROKE_CHUNKSIZE * 2);
-					if(!halt)
-						this.runAudioProcessing();
-				} else { // there are some samples left in the next buffer
-					this.inStrokeMiddle = true;
-					this.strokeSamplesLeft = STROKE_CHUNKSIZE * 2
-							- (data.length - startIdx);
-					this.strokeBuffer = new short[STROKE_CHUNKSIZE * 2];
-					System.arraycopy(data, startIdx, strokeBuffer, 0,
-							data.length - startIdx);
+			}
+			if (!halt)
+				this.runAudioProcessing(this.strokeAudioBuffer.getKeyStrokeAudioForFeature());
+		} else {
+			//no audio data ready yet
+			// 2 cases:
+			// 1. detected a stroke, waiting for more audio
+			// 2. no stroke detected yet 
+			if (this.strokeAudioBuffer.needMoreAudio()){
+				//do nothing when there's already a key stroke in place
+				//we are just waiting for more data
+				return;
+			} else {
+				int startIdx = KeyStroke.detectStroke_threshold(data);
+				if (-1 == startIdx) { // when there is no stroke
+					return;
+				} else {
+					//detect a new key stroke
+					//revert the startIdx back, so that we get info before the strong peak
+					this.strokeAudioBuffer.setValidIdx(startIdx-200, data.length);
 				}
 			}
-		} else { // if in the middle of a stroke
-			if (data.length >= strokeSamplesLeft) {
-				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
-						- 1 - strokeSamplesLeft, strokeSamplesLeft);
-				this.inStrokeMiddle = false;
-				this.strokeSamplesLeft = 0;
-				this.strokeBuffer = Arrays.copyOf(this.strokeBuffer,
-						STROKE_CHUNKSIZE * 2);
-				// get the audio features from this stroke and add it to the
-				// training set, do it in background
-				if(!halt)
-					this.runAudioProcessing();
-			} else { // if the length is smaller than the needed sample left
-				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
-						- 1 - strokeSamplesLeft, data.length);
-				this.inStrokeMiddle = true;
-				this.strokeSamplesLeft = this.strokeSamplesLeft - data.length;
-			}
 		}
+		
+//			if (data.length >= strokeSamplesLeft) {
+//				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
+//						- 1 - strokeSamplesLeft, strokeSamplesLeft);
+//				this.inStrokeMiddle = false;
+//				this.strokeSamplesLeft = 0;
+//				this.strokeBuffer = Arrays.copyOf(this.strokeBuffer,
+//						STROKE_CHUNKSIZE * 2);
+//				// get the audio features from this stroke and add it to the
+//				// training set, do it in background
+//				if(!halt)
+//					this.runAudioProcessing();
+//			} else { // if the length is smaller than the needed sample left
+//				System.arraycopy(data, 0, strokeBuffer, STROKE_CHUNKSIZE * 2
+//						- 1 - strokeSamplesLeft, data.length);
+//				this.inStrokeMiddle = true;
+//				this.strokeSamplesLeft = this.strokeSamplesLeft - data.length;
+//			}
 	}
 
 	/**
 	 * audio processing. extract features from audio. Add features to KNN.
 	 */
-	public void runAudioProcessing() {
-		// get the audio features from this stroke and add it
-		// to the training set, do it in background
-		short[] audioStroke = this.strokeBuffer;
+	public void runAudioProcessing(short[] audioStroke) {
 		// separate left and right channel
 		short[][] audioStrokeData = KeyStroke.seperateChannels(audioStroke);
-		this.strokeBuffer = null;
 		// get features
 		double[] features= SPUtil.getAudioFeatures(audioStrokeData);
-		// if not halt by user input by screen keyboard, continue catching and
-		// showing data-- jj. not using complex online learning right now
-		// if(!halt)
-		// this.dealwithBackSpace(features);
-		// else Log.d(LTAG, "screen halts audioprocessing, we do nothing");
-		
-		
 		
 		/*********get hints from dictionary*****************/
 		List<String> hintsFromDict=null;
@@ -298,7 +308,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K,hintsFromDict);
 		this.previousKey =  detectResult;		
 		//add unsure sample to staging area
-		mKNN.addToStage(detectResult, features);
+		//TODO 
+		//mKNN.addToStage(detectResult, features);
 		
 		/**********statistic***************/
 		stat.addInput(0,detectResult); //we suppose the input is correct		
@@ -355,9 +366,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 						public void onClick(View v) {
 							// race condition, UI is updating KNN, need to make
 							// sure the background thread will not change mKNN
+		
 							mGyro.lastTouchScreenTime=System.nanoTime();														
-							mKNN.correctWrongDetection(((Button) v).getText()
-									.toString(),detectResult);
+							//TODO
+							//mKNN.correctWrongDetection(((Button) v).getText()
+								//	.toString(),detectResult);
 							charas=charas.substring(0,charas.length()-1);
 							showDetectResult.remove(showDetectResult.size()-1);
 							//update output according to shift and caps
@@ -389,11 +402,14 @@ public class TestingActivity extends Activity implements RecBufListener{
 					RelativeLayout.LayoutParams rp = new RelativeLayout.LayoutParams(
 							LayoutParams.WRAP_CONTENT,
 							LayoutParams.WRAP_CONTENT);
+					rp.width=130;
+					rp.height=100;					
 					rp.addRule(RelativeLayout.BELOW, R.id.text_detectionResult);
 					if (0 != i) {
 						rp.addRule(RelativeLayout.RIGHT_OF,
 								myButton.getId() - 1);
 					}
+					myButton.setTextColor(Color.parseColor("#000000"));
 					myButton.setLayoutParams(rp);
 					rl.addView(myButton);
 				}
@@ -528,12 +544,12 @@ public class TestingActivity extends Activity implements RecBufListener{
 		
 	}
 	
-	
+
 	public void updateUI(){
 		/***Update UI********/
 		textInputRate.setText("input rate:" + String.valueOf(stat.inputRate)+ "ch/s") ;
 		//text.setText(charas);
-		text.setText(showDetectResult.toString());
+		text.setText(this.listToString(showDetectResult));
 		totalInputText.setText(String.valueOf(this.stat.totalInputTimes));
 		totalAccuracyText.setText(String.valueOf(this.stat.totalAccuracy * 100) + "%");
 		if(shift == 2){
@@ -568,5 +584,14 @@ public class TestingActivity extends Activity implements RecBufListener{
 	    } else {
 	    	Log.d(LTAG, "try to register gyro sensor. but there is no GyroHelper class used");
 	    }
-	  }	
+	  }
+	  
+	  
+	  public String listToString(List<?> list) {
+		    String result = "";
+		    for (int i = 0; i < list.size(); i++) {
+		        result += list.get(i);
+		    }
+		    return result;
+		}	  
 }
