@@ -27,6 +27,14 @@ public class Item {
 			this.features[i] = features[i];
 	}
 	
+	public Item(String category, double[] features, int wrongNum) {
+		this.category = category;
+		this.features = new double[features.length];
+		this.wrongTimes=wrongNum;
+		for (int i = 0; i < features.length; i++)
+			this.features[i] = features[i];
+	}
+	
 	@Override
 	/**
 	 * Item to string should in the following format: "category:feature1,feature2,feature3...."
@@ -36,8 +44,8 @@ public class Item {
 		//append wrong times
 		output.append("wrong:"+String.valueOf(this.wrongTimes)+"==");
 		int printSize=this.features.length;
-		if (printSize > 5)
-			printSize=5;
+		/*if (printSize > 5)
+			printSize=5;*/
 		for (int index=0;index<printSize;index++){
 			output.append(features[index]);
 			output.append(",");

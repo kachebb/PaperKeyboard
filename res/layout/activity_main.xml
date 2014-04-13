@@ -6,19 +6,20 @@
     android:paddingRight = "16dp"
     android:orientation="vertical"
     android:keepScreenOn="true">
+    <!-- 
     <TextView
          android:id="@+id/text_debugKNN"
          android:layout_width="wrap_content"
          android:layout_height="wrap_content"
          android:hint="@string/debugKNN"
          android:textSize="12sp" />
-
+ -->
     <TextView
         android:id="@+id/text_showhint"
         android:layout_width="400dp"
         android:layout_height="fill_parent"
         android:layout_above="@+id/mButton"
-        android:layout_below="@id/text_debugKNN"
+    
         android:focusable="true"
         android:gravity="center"
         android:hint="@string/text_hint"
@@ -46,13 +47,27 @@
         android:text="@string/button_clear" 
      	android:onClick="onClickClear"
         />
+    
+      <Button
+	    android:id="@+id/ButtonloadkNN"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_below="@id/clearButton"
+       	android:layout_toRightOf="@id/text_showhint"
+        android:layout_gravity = "center"
+        android:text="@string/loadknn" 
+     	android:onClick="onClickLoad"
+        />
+    
+    
     <TextView
         android:id="@+id/text_waveThreshold"
         android:hint = "@string/waveThreshold"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
-        android:layout_below="@id/text_debugKNN"
+   
         />
 
     <EditText
@@ -72,7 +87,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
      	android:layout_toRightOf = "@id/input_waveThreshold"
-        android:layout_below="@id/text_debugKNN"
+     
         />
 
     <EditText

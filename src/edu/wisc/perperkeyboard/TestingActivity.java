@@ -1,21 +1,24 @@
 package edu.wisc.perperkeyboard;
 
+import java.io.File;
 import java.io.FileNotFoundException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -26,11 +29,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.TextView.OnEditorActionListener;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 import edu.wisc.jj.BasicKNN;
-import edu.wisc.jj.Item;
 import edu.wisc.jj.SPUtil;
 
 
@@ -38,19 +40,19 @@ public class TestingActivity extends Activity implements RecBufListener{
 	/*************constant values***********************/
 	private static final String LTAG = "testing activity debug";
 	private static int STROKE_CHUNKSIZE;
-	
+	private final Context context = this;
 	/*************UI ********************************/
 	private TextView text;
 	private EditText editText;
-	private TextView textInputRate;
+//	private TextView textInputRate;
 	private volatile static String charas = "";
 	private volatile static List<String> showDetectResult;
-	private TextView debugKNN;
+//	private TextView debugKNN;
 	private TextView totalInputText;
-	private TextView totalAccuracyText;
+//	private TextView totalAccuracyText;
 	private ToggleButton ShiftButton;
 	private ToggleButton CapsButton;
-	private TextView recentAccuracyText;
+//	private TextView recentAccuracyText;
 	private Button dictButton;
 	/*************Audio Processing*******************/
 	private BasicKNN mKNN;
@@ -93,14 +95,14 @@ public class TestingActivity extends Activity implements RecBufListener{
 		setContentView(R.layout.activity_testing);
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 		text = (TextView) findViewById(R.id.text_detectionResult);
-		textInputRate = (TextView) findViewById(R.id.text_detection);
+	//	textInputRate = (TextView) findViewById(R.id.text_detection);
 		editText = (EditText) findViewById(R.id.inputChar);
-		debugKNN = (TextView) findViewById(R.id.text_debugKNN);
+	//	debugKNN = (TextView) findViewById(R.id.text_debugKNN);
 		totalInputText = (TextView) findViewById(R.id.text_inputTimes);
-		totalAccuracyText = (TextView) findViewById(R.id.text_errorTimes);
+		//totalAccuracyText = (TextView) findViewById(R.id.text_errorTimes);
 		ShiftButton = (ToggleButton) findViewById(R.id.toggle_shift);
 		CapsButton = (ToggleButton) findViewById(R.id.toggle_caps);
-		recentAccuracyText = (TextView) findViewById(R.id.text_recentAccuracy);
+	//	recentAccuracyText = (TextView) findViewById(R.id.text_recentAccuracy);
 		dictButton = (Button) findViewById(R.id.button_Dict);
 		editText.setOnClickListener(new View.OnClickListener() {
 		    @Override
@@ -139,7 +141,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		//mKNN = (KNN)i.getSerializableExtra("SampleObject");
 		mKNN = MainActivity.mKNN;
 		text.setText("Training Size:"+String.valueOf(mKNN.getTrainingSize()));
-		debugKNN.setText(mKNN.getChars());
+//		debugKNN.setText(mKNN.getChars());
 		showDetectResult = new ArrayList<String>();
 		dictStatus = false;
 		if(dictStatus)
@@ -153,7 +155,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		clickTimes = 0;
 		Log.d(LTAG, "on create called once for main acitivity");
 		this.register(mBuffer);
-		recordingThread = new Thread(mBuffer);
+		//recordingThread = new Thread(mBuffer);
 		Toast.makeText(getApplicationContext(),
 				"Please Wait Until This disappear", Toast.LENGTH_SHORT).show();
 		recordingThread.start();
@@ -350,6 +352,9 @@ public class TestingActivity extends Activity implements RecBufListener{
 					hintButtonList.add(myButton);
 					myButton.setText(labels.get(i));
 					myButton.setId(100 + i);
+					myButton.setTextColor(Color.BLACK);
+					myButton.setWidth(30);
+					myButton.setHeight(30);
 					myButton.setOnClickListener(new OnClickListener() {
 						@Override
 						public void onClick(View v) {
@@ -475,6 +480,76 @@ public class TestingActivity extends Activity implements RecBufListener{
 		stat.addInput(3, "backspace");
 	}
 
+	/***
+	 * This fuction is called when user click Save button on screen
+	 * It saves current KNN training set to file
+	 */
+	public void onClickSave(View view) {
+		LayoutInflater li = LayoutInflater.from(context);
+		View promptsView = li.inflate(R.layout.dialog_savingknn, null);
+
+		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+				context);
+
+		// set prompts.xml to alertdialog builder
+		alertDialogBuilder.setView(promptsView);
+
+		final EditText userInput = (EditText) promptsView
+				.findViewById(R.id.editTextFileName);
+
+		// set dialog message
+		alertDialogBuilder
+			.setCancelable(false)
+			.setPositiveButton("OK",
+			  new DialogInterface.OnClickListener() {
+			    public void onClick(DialogInterface dialog,int id) {
+				// get user input and set it to result
+				// edit text
+			    	String fileName = userInput.getText().toString();
+					
+					String state = Environment.getExternalStorageState();
+				    if (!Environment.MEDIA_MOUNTED.equals(state)) {
+				    	Log.e("save KNN", "Directory not created");
+				    }
+				    File sdCard = Environment.getExternalStorageDirectory();
+				    File dir = new File (sdCard.getAbsolutePath() + "/UbiK");
+				    File file = new File(dir,   fileName);	    	
+				   
+				    
+				    
+				    boolean b = mKNN.save(file);
+				    String msg;
+				    if(b== true){
+				    	msg = "Save kNN file successfully! You can load it in future.";
+				    }else{
+				    	msg = "Something wrong happens when saving kNN file!";
+				    }
+				    new AlertDialog.Builder(context)
+				    .setTitle("Save kNN")
+				    .setMessage(msg)
+				    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+				        public void onClick(DialogInterface dialog, int which) { 
+				            // continue with delete
+				        }
+				     })
+				     .show();
+			    }
+			  })
+			.setNegativeButton("Cancel",
+			  new DialogInterface.OnClickListener() {
+			    public void onClick(DialogInterface dialog,int id) {
+				dialog.cancel();
+			    }
+			  });
+		AlertDialog alertDialog = alertDialogBuilder.create();
+		 
+		// show it
+		alertDialog.show();		
+		
+	}
+
+	
+	
 	/**
 	 * finish testing, save logs to file
 	 * @param view
@@ -531,11 +606,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 	
 	public void updateUI(){
 		/***Update UI********/
-		textInputRate.setText("input rate:" + String.valueOf(stat.inputRate)+ "ch/s") ;
-		//text.setText(charas);
-		text.setText(showDetectResult.toString());
+//		textInputRate.setText("input rate:" + String.valueOf(stat.inputRate)+ "ch/s") ;
+		text.setText(charas);
+		//text.setText(showDetectResult.toString());
 		totalInputText.setText(String.valueOf(this.stat.totalInputTimes));
-		totalAccuracyText.setText(String.valueOf(this.stat.totalAccuracy * 100) + "%");
+	//	totalAccuracyText.setText(String.valueOf(this.stat.totalAccuracy * 100) + "%");
 		if(shift == 2){
 			//ShiftButton.animate();
 			ShiftButton.setChecked(true);
@@ -545,8 +620,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 			CapsButton.setChecked(true);
 		}else CapsButton.setChecked(false);
 		//totalAccuracyText.setText(String.valueOf(errorInputTimes));
-		debugKNN.setText(mKNN.getChars());
-		recentAccuracyText.setText(String.valueOf(stat.recentAccuracy*100) + "%");
+		//debugKNN.setText(mKNN.getChars());
+	//	recentAccuracyText.setText(String.valueOf(stat.recentAccuracy*100) + "%");
 		
 	}
 	

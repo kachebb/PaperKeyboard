@@ -1,26 +1,34 @@
 package edu.wisc.perperkeyboard;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.InputType;
+import android.os.Environment;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 import android.widget.Toast;
@@ -34,16 +42,19 @@ public class MainActivity extends Activity implements RecBufListener{
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
 	public static final int STROKE_CHUNKSIZE = 2000;
-	private static int TRAINNUM = 5; //how many keystroke we need to get for each key when training 
+	private static int TRAINNUM = 1; //how many keystroke we need to get for each key when training 
 	public static BasicKNN mKNN;
 	private enum InputStatus {
-		AtoZ, NUM, //LEFT, RIGHT, BOTTOM
+		All,//AtoZ, NUM,LEFT, RIGHT, BOTTOM
 	}
+	
+	private Context context = this;
+	
 	/****to track input stage*************/
 	// expected chunk number in each stage
 //	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 5 };
 //	private final int[] ExpectedInputNum = { 3, 1, 4, 11, 6 };
-	private final int[] ExpectedInputNum = {26,12};
+	private final int[] ExpectedInputNum = {27};
 	//private final int[] ExpectedInputNum = {26};	
 	private InputStatus inputstatus;
 	private Set<InputStatus> elements;
@@ -56,7 +67,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	private static EditText gyroThre;
 	private Thread recordingThread;
 	private RecBuffer mBuffer;
-	private static TextView debugKNN;
+	//private static TextView debugKNN;
 	/************audio collection***********/
 	private short[] strokeBuffer;
 	private boolean inStrokeMiddle;
@@ -79,7 +90,7 @@ public class MainActivity extends Activity implements RecBufListener{
 		setContentView(R.layout.activity_main);
 		text = (TextView) findViewById(R.id.text_showhint);
 		mButton = (Button) findViewById(R.id.mButton);
-		debugKNN = (TextView) findViewById(R.id.text_debugKNN);
+		//debugKNN = (TextView) findViewById(R.id.text_debugKNN);
 		waveThre = (EditText) findViewById(R.id.input_waveThreshold);
 		gyroThre = (EditText) findViewById(R.id.input_gyroThreshold);
 		waveThre.setText(String.valueOf(KeyStroke.THRESHOLD));
@@ -114,6 +125,10 @@ public class MainActivity extends Activity implements RecBufListener{
 		    }
 		});
 		gyroThre.clearFocus();
+		
+		
+		
+		
 		/******init values*************/
 		this.inStrokeMiddle = false;
 		this.strokeSamplesLeft = 0;
@@ -269,12 +284,17 @@ public class MainActivity extends Activity implements RecBufListener{
 //			mKNN.test = 10;
 		    startActivity(intent);
 		} else {
-			if (recordingThread == null) {
-				text.setText(inputstatus.toString() + "is recording"+ "trainning:"+"\n" + trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx));
-				Toast.makeText(getApplicationContext(),
-						"Please Wait Until This disappear", Toast.LENGTH_SHORT)
-						.show();
-				Log.d(LTAG, "onClickButton starting another recording thread");
+			this.runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					text.setText(inputstatus.toString() + "is recording"+ "trainning:"+"\n" + trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx));
+					Toast.makeText(getApplicationContext(),
+							"Please Wait Until This disappear", Toast.LENGTH_SHORT)
+							.show();
+					Log.d(LTAG, "onClickButton starting another recording thread");
+				}
+			});
+			if (recordingThread == null) {				
 				// Init RecBuffer and thread
 				mBuffer = new RecBuffer();
 				recordingThread = new Thread(mBuffer);
@@ -319,7 +339,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	         + "current training: "
 	         + trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
 	         + String.valueOf(TRAINNUM - TrainedNum) + "left");
-	     debugKNN.setText(mKNN.getChars());	
+	   //  debugKNN.setText(mKNN.getChars());	
 	
 	    /*	     
 		/////////////////Each Key Several Times////////////////////
@@ -385,7 +405,7 @@ public class MainActivity extends Activity implements RecBufListener{
 				+ "current training: "
 				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
 				+ String.valueOf(TRAINNUM - TrainedNum) + "left");
-		debugKNN.setText(mKNN.getChars());
+	//	debugKNN.setText(mKNN.getChars());
 		if(this.finishedTraining){
 			Toast.makeText(getApplicationContext(),
 					"Please Wait Until This disappear", Toast.LENGTH_SHORT)
@@ -395,6 +415,92 @@ public class MainActivity extends Activity implements RecBufListener{
 		}
 	}
 
+	
+	/**
+	 * This is a function to load mKNN from file
+	 * @param view
+	 */
+	public void onClickLoad(View view){
+		/********UI for load kNN file*********/
+		setContentView(R.layout.dialog_loadknn);
+		
+		
+		setContentView(R.layout.activity_main);
+		
+		LayoutInflater li = LayoutInflater.from(context);
+		View promptsView = li.inflate(R.layout.dialog_loadknn, null);
+
+		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+				context);
+
+		// set prompts.xml to alertdialog builder
+		alertDialogBuilder.setView(promptsView);
+		List<String> fileList = new ArrayList<String>();
+		   
+		String state = Environment.getExternalStorageState();
+	    if (!Environment.MEDIA_MOUNTED.equals(state)) {
+	    	Log.e("save KNN", "Directory not created");
+	    }
+	    File sdCard = Environment.getExternalStorageDirectory();
+	    File dir = new File (sdCard.getAbsolutePath() + "/UbiK");
+	  
+	     File[] files = dir.listFiles();
+	     fileList.clear();
+	     for (File file : files){
+	      fileList.add(file.getPath());  
+	     }
+	     
+	    
+		ListView listview = (ListView) promptsView.findViewById(R.id.lv);
+		ArrayAdapter<String> directoryList = new ArrayAdapter<String>(this,
+			       android.R.layout.simple_list_item_1, fileList);
+		listview.setAdapter(directoryList); 	
+		listview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
+		      @Override
+		      public void onItemClick(AdapterView<?> parent, final View view,
+		          int position, long id) {
+		        final String item = (String) parent.getItemAtPosition(position);
+		        view.animate().setDuration(2000).alpha(0)
+		            .withEndAction(new Runnable() {
+		              @Override
+		              public void run() {
+		                view.setAlpha(1);
+		                File file = new File (item);
+		                mKNN.load(file);
+		                Intent intent = new Intent(context, TestingActivity.class);
+		    		    startActivity(intent);
+		              }
+		            });
+		      }
+
+		});
+		// set dialog message
+		alertDialogBuilder
+			.setCancelable(false)
+			.setPositiveButton("OK",
+			  new DialogInterface.OnClickListener() {
+			    public void onClick(DialogInterface dialog,int id) {
+				// get user input and set it to result
+				// edit text
+			    	dialog.cancel();
+			    }
+			  })
+			.setNegativeButton("Cancel",
+			  new DialogInterface.OnClickListener() {
+			    public void onClick(DialogInterface dialog,int id) {
+				dialog.cancel();
+			    }
+			  });
+		AlertDialog alertDialog = alertDialogBuilder.create();
+		 
+		// show it
+		alertDialog.show();		
+	     
+		
+	}
+	
+	
 	/**
 	 * audio processing. extract features from audio. Add features to KNN.
 	 */
@@ -468,11 +574,11 @@ public class MainActivity extends Activity implements RecBufListener{
 				+ "current training: "
 				+ trainingItemName.get(inputstatus.ordinal()).get(curTrainingItemIdx)+"\n"
 				+ String.valueOf(TRAINNUM - TrainedNum) + "left");
-					debugKNN.setText(mKNN.getChars());	
+			//		debugKNN.setText(mKNN.getChars());	
 				}
 				else {
 					text.setText("Training finished, click to start testing");
-					debugKNN.setText(mKNN.getChars());
+			//		debugKNN.setText(mKNN.getChars());
 					mButton.setText("Click to Test");
 				}
 			}
@@ -519,6 +625,8 @@ class addTrainingItem {
 		// add characters into training item
 		for (int idx = 0; idx < 26; idx++)
 			AtoZArray.add(String.valueOf((char)('a' + idx)));
+		AtoZArray.add(" ");
+		//AtoZArray.add("Lshift");
 		trainingItemName.add(AtoZArray);
 		ArrayList<String> NumArray = new ArrayList<String>();
 		// add numbers into training item
@@ -541,10 +649,11 @@ class addTrainingItem {
 		ArrayList<String> RightArray = new ArrayList<String>();
 		// add right into training item
 		RightArray.add("BackSpace");
-		RightArray.add("\\");
+		
 		RightArray.add("]");
 		RightArray.add("[");
 		RightArray.add("Enter");
+		RightArray.add("\\");
 		RightArray.add("'");
 		RightArray.add(";");
 		RightArray.add("RShift");

@@ -10,14 +10,14 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context=".TestingActivity" >
-
+<!--  
       <TextView
          android:id="@+id/text_debugKNN"
          android:layout_width="wrap_content"
          android:layout_height="wrap_content"
          android:hint="@string/debugKNN"
          android:textSize="12sp" />
-
+  
      <TextView
          android:id="@+id/text_detection"
          android:layout_width="100dp"
@@ -26,19 +26,22 @@
          android:gravity="center"
          android:hint="@string/inputRate"
          android:textSize="13sp" />
+-->
 
      <TextView
          android:id="@+id/text_detectionResult"
          android:layout_width="fill_parent"
          android:layout_height="wrap_content"
+       
          android:layout_alignParentLeft="true"
+         android:layout_alignParentTop="true"
+         android:layout_marginBottom="3dp"
+         android:layout_marginTop="3dp"
          android:layout_toLeftOf="@+id/text_inputHint"
-      	 android:layout_below="@id/text_detection"
-         android:gravity="left"      	 
-      	 android:layout_marginBottom="3dp"
-      	 android:layout_marginTop="3dp"
+         android:gravity="left"
          android:hint="@string/detectionResult"
-         android:textSize="18sp"
+         android:scrollbars="horizontal"
+         android:textSize="30sp"
          android:textStyle="bold" />
 
      <TextView
@@ -56,8 +59,9 @@
          android:layout_height="wrap_content"
          android:layout_alignParentRight="true"
       	 android:layout_below="@id/text_inputHint"
+      	 android:gravity="center"
          android:hint = "@string/inputTimes" />
-       
+     <!--   
         <TextView
          android:id="@+id/text_errorHint"
          android:layout_width="wrap_content"
@@ -93,29 +97,55 @@
       	 android:layout_below="@id/text_recentAccuracyHint"
          android:hint = "@string/recentAccuracy"  />
        
+       
+    -->
+       
        <ToggleButton
            android:id="@+id/toggle_shift"
            android:layout_width="wrap_content"
-           android:layout_height="20dp"
-           android:layout_alignRight="@+id/text_errorTimes"
-           android:layout_below="@id/text_recentAccuracy"
-           android:layout_above ="@+id/toggle_caps"
-           android:textOff="@android:string/no"
+           android:layout_height="wrap_content"
+           android:layout_alignRight="@+id/text_inputTimes"
+           android:layout_below="@+id/text_inputTimes"
+           android:textOff="@string/toggleshift"
            android:textOn="@string/toggleshift" />
        
-       <ToggleButton
-           android:id="@+id/toggle_caps"
-           android:layout_width="wrap_content"
-           android:layout_height="30dp"
-           android:layout_alignRight="@+id/text_errorTimes"
-           android:layout_above="@+id/backSpace"
-          
-           android:textOff="@android:string/no"
-           android:textOn="@string/togglecaps" />
+         <ToggleButton
+             android:id="@+id/toggle_caps"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:layout_alignRight="@+id/text_inputTimes"
+             android:layout_below="@+id/toggle_shift"
+             android:textOff="@string/togglecaps"
+             android:textOn="@string/togglecaps" />
+       
+       <Button
+	    android:id="@+id/button_Dict"
+        android:layout_width="wrap_content"
+        android:layout_height = "wrap_content"
+        android:layout_gravity = "center"
+        
+        android:layout_alignRight="@+id/text_inputTimes"
+        android:layout_below="@id/toggle_caps"
+        android:text="@string/button_Dict" 
+     	android:onClick="onClickDict"
+        />
+       
+       <Button
+	    android:id="@+id/button_Save"
+        android:layout_width="wrap_content"
+        android:layout_height = "wrap_content"
+        android:layout_gravity = "center"
+        
+        android:layout_alignRight="@+id/text_inputTimes"
+        android:layout_below="@id/button_Dict"
+        android:text="@string/button_Save" 
+     	android:onClick="onClickSave"
+        />
+     
        
      <EditText
          android:id="@+id/inputChar"
-         android:layout_width="wrap_content"
+         android:layout_width="300dp"
          android:layout_height="wrap_content"
          android:layout_alignParentBottom="true"
          android:layout_centerVertical="true"
@@ -128,23 +158,13 @@
          android:textStyle="bold" >
      </EditText>
      
-     <Button
-	    android:id="@+id/button_Dict"
-	    android:layout_toRightOf="@id/inputChar"
-	    android:layout_toLeftOf="@+id/backSpace"
-        android:layout_width="wrap_content"
-        android:layout_height = "wrap_content"
-        android:layout_gravity = "center"
-        android:layout_alignParentBottom="true" 
-        android:text="@string/button_Dict" 
-     	android:onClick="onClickDict"
-        />
      
      <Button
 	    android:id="@+id/backSpace"
 	 
-	    android:layout_toLeftOf="@+id/button_finish"
-        android:layout_width="wrap_content"
+	
+        android:layout_width="250dp"
+         android:layout_alignParentRight="true"
         android:layout_height = "wrap_content"
         android:layout_gravity = "center"
         android:layout_alignParentBottom="true" 
@@ -152,6 +172,7 @@
      	android:onClick="onClickButtonBackSpace"
         />
      
+     <!-- 
      <Button
 	    android:id="@+id/button_finish"
         android:layout_width="wrap_content"
@@ -162,7 +183,7 @@
         android:text="@string/finish" 
      	android:onClick="onClickButtonFinish"
         />
-
+-->
      
   
 </RelativeLayout>

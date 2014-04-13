@@ -3,6 +3,8 @@ package edu.wisc.jj;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -11,11 +13,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import android.annotation.SuppressLint;
+import android.os.Environment;
+import android.util.Log;
 
 /**
  * A kNN classification algorithm implementation.
@@ -25,7 +30,7 @@ public class BasicKNN implements KNN{
 	List<Item> trainingSet;
 	Item[] closestList;
 	public final int DISTTHRE = 1;
-	private int trainingSize = 5; // number of training samples to keep for each
+	private int trainingSize = 10; // number of training samples to keep for each
 									// category. default 5
 	private Item staged;
 	// sorted item's categories given distance. updated each time when classify
@@ -42,7 +47,7 @@ public class BasicKNN implements KNN{
 	public BasicKNN() {
 		this.trainingSet = Collections.synchronizedList(new ArrayList<Item>());
 	}
-
+	
 	/**
 	 * set the trainingSize for each Key
 	 * 
@@ -128,8 +133,8 @@ public class BasicKNN implements KNN{
 	public void removeLatestInput() {
 		if(null != this.staged)
 			this.staged = null;
-		else
-			trainingSet.remove(trainingSet.size() - 1);
+		//else
+			//trainingSet.remove(trainingSet.size() - 1);
 	}
 
 
@@ -322,14 +327,16 @@ public class BasicKNN implements KNN{
 			BufferedReader br = new BufferedReader(fr);
 			String eachLine = null;
 			while (null != (eachLine = br.readLine())) {
-				String[] text = eachLine.split(":");
+				String[] text = eachLine.split("(:)|(==)");
 				String category = text[0];
-				String featureLine = text[1];
+				String wrongNum = text[2];
+				int num = Integer.valueOf(wrongNum);
+				String featureLine = text[3];
 				String[] featuresInString = featureLine.split(",");
 				double[] features = new double[featuresInString.length];
 				for (int i = 0; i < features.length; i++)
 					features[i] = Double.valueOf(featuresInString[i]);
-				Item nItem = new Item(category, features);
+				Item nItem = new Item(category, features,num);
 				this.trainingSet.add(nItem);
 			}
 			br.close();

@@ -39,21 +39,21 @@ public class RecBuffer implements Runnable {
 			Log.d(LTAG, "Starts!");
 			SystemClock.sleep(4000);
 
-//			os.writeBytes("/system/bin/tinymix 27 120\n");
-//			os.flush();
-//			SystemClock.sleep(100);
-//			os.writeBytes("/system/bin/tinymix 54 11\n");
-//			os.flush();
-//			SystemClock.sleep(100);
-//			os.writeBytes("/system/bin/tinymix 55 12\n");
-//			os.flush();
-//			SystemClock.sleep(100);
-//			os.writeBytes("/system/bin/tinymix 76 1\n");
-//			os.flush();
-//			SystemClock.sleep(100);
-//			os.writeBytes("/system/bin/tinymix 77 1\n");
-//			os.flush();
-//			SystemClock.sleep(100);
+			os.writeBytes("/system/bin/tinymix 27 120\n");
+			os.flush();
+			SystemClock.sleep(100);
+			os.writeBytes("/system/bin/tinymix 54 11\n");
+			os.flush();
+			SystemClock.sleep(100);
+			os.writeBytes("/system/bin/tinymix 55 12\n");
+			os.flush();
+			SystemClock.sleep(100);
+			os.writeBytes("/system/bin/tinymix 76 1\n");
+			os.flush();
+			SystemClock.sleep(100);
+			os.writeBytes("/system/bin/tinymix 77 1\n");
+			os.flush();
+			SystemClock.sleep(100);
 
 			
 			os.writeBytes("/system/xbin/killall tinycap\n");
@@ -81,7 +81,8 @@ public class RecBuffer implements Runnable {
 
 			// infinite recording
 			//changed for nexus 7
-			os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 1 -d 0 -c 2 -r 48000 -b 16\n");
+			//os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 1 -d 0 -c 2 -r 48000 -b 16\n");
+			os.writeBytes("/system/bin/tinycap /sdcard/tmp.wav -D 0 -d 1 -c 2 -r 48000 -b 16\n");
 			os.flush();
 			SystemClock.sleep(100);
 			
