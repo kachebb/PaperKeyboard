@@ -34,6 +34,12 @@ import android.widget.Toast;
 import android.widget.ToggleButton;
 import edu.wisc.jj.BasicKNN;
 import edu.wisc.jj.SPUtil;
+import edu.wisc.liyuan.dictionaryCorrection.DictionaryControllor;
+import edu.wisc.liyuan.dictionaryCorrection.DictionaryControllorImpl;
+import edu.wisc.liyuan.dictionaryCorrection.DictionaryCorrectior;
+import edu.wisc.liyuan.dictionaryCorrection.DictionaryCorrectorImpl;
+import edu.wisc.liyuan.dictionaryCorrection.WordCollector;
+import edu.wisc.liyuan.dictionaryCorrection.WordCollectorImpl;
 
 
 public class TestingActivity extends Activity implements RecBufListener{
@@ -70,6 +76,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private boolean clickOnceAndSame = false;
 	private int CLASSIFY_K = 1;
 	private volatile List<Button> hintButtonList;
+	private volatile List<Button> CorrectionButtonList;
 	
 	/********************Shift and caps*****************************/
 	private int shift;
@@ -86,6 +93,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 	//should be " ". right now for training simplicity, used an arbitrary character
 	private static final String WORD_SPLITTER = " ";	
 	private boolean dictStatus = true;
+	
+	/********************DictionaryCorrector****************/
+	private DictionaryControllor dictionaryControllor;
+	
+
 	
 	@SuppressLint("NewApi")
 	@Override
@@ -144,8 +156,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 //		debugKNN.setText(mKNN.getChars());
 		showDetectResult = new ArrayList<String>();
 		dictStatus = false;
-		if(dictStatus)
-			dictButton.setText("Using Dict");
+		if(dictStatus) dictButton.setText("Using Dict");
 		else dictButton.setText("Non-Dict");
 		
 		this.STROKE_CHUNKSIZE = MainActivity.STROKE_CHUNKSIZE;
@@ -168,6 +179,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 		/********************dictionary**************************/
 		//use dict_2of12inf in resource/raw folder
 		this.mDict=new Dictionary(getApplicationContext(), R.raw.dict_2of12inf);
+		/****************dictionaryInit****************************/
+		dictionaryControllor = new DictionaryControllorImpl(Environment.getExternalStorageDirectory() + getString(R.string.DictionaryFilePath));
 	}
 
 
@@ -263,6 +276,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	/**
 	 * audio processing. extract features from audio. Add features to KNN.
 	 */
+	String[] results;
 	public void runAudioProcessing() {
 		// get the audio features from this stroke and add it
 		// to the training set, do it in background
@@ -298,7 +312,14 @@ public class TestingActivity extends Activity implements RecBufListener{
 		
 		/********** detect using KNN *******/		
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K,hintsFromDict);
-		this.previousKey =  detectResult;		
+		this.previousKey =  detectResult;	
+		if(detectResult.equals(" ")){
+			dictionaryControllor.clear();
+		}else{
+			dictionaryControllor.attach(detectResult.charAt(0));
+		}
+		results =  dictionaryControllor.getCorrectionList();
+
 		//add unsure sample to staging area
 		mKNN.addToStage(detectResult, features);
 		
@@ -358,36 +379,17 @@ public class TestingActivity extends Activity implements RecBufListener{
 					myButton.setOnClickListener(new OnClickListener() {
 						@Override
 						public void onClick(View v) {
-							// race condition, UI is updating KNN, need to make
-							// sure the background thread will not change mKNN
-							mGyro.lastTouchScreenTime=System.nanoTime();														
-							mKNN.correctWrongDetection(((Button) v).getText()
-									.toString(),detectResult);
-							charas=charas.substring(0,charas.length()-1);
-							showDetectResult.remove(showDetectResult.size()-1);
-							//update output according to shift and caps
-							updateData(((Button)v).getText().toString());
-							
-							/*******if false recognition result is shift or caps**************/
-							if(detectResult.equals("LShift") || detectResult.equals("RShift")){
-								shift = 0;
+							String correctionString = ((Button)v).getText().toString();
+							if(charas.contains(" ")){
+								String strs[] = charas.split(" ");
+								strs[strs.length-1] = correctionString;
+								StringBuffer sb = new StringBuffer();
+								for(String s:strs){
+									sb.append(s);
+									sb.append(" ");
+								}
+								charas=sb.toString();
 							}
-							if(detectResult.equals("Caps")){
-								caps = !caps;
-							}
-							
-							/******if new correction input is shift or caps**********/
-							if(((Button)v).getText().toString().equals("LShift")
-									|| ((Button)v).getText().toString().equals("RShift"))
-								shift = 2;
-							if(((Button)v).getText().toString().equals("Caps"))
-								caps = true;
-							
-							
-							Log.d("after correction: ", mKNN.toString());
-							
-							stat.addInput(1, ((Button)v).getText().toString());
-							//Update UI;
 							updateUI();
 						}
 					});
@@ -401,6 +403,42 @@ public class TestingActivity extends Activity implements RecBufListener{
 					}
 					myButton.setLayoutParams(rp);
 					rl.addView(myButton);
+				}
+			
+			
+
+			/********correction buttons*************/		
+			// rm all existing hint buttons on screen
+			if (null == CorrectionButtonList) {
+				CorrectionButtonList = new LinkedList<Button>();
+			} else {
+				for (Button mButton : CorrectionButtonList) {
+					rl.removeView(mButton);
+				}
+				CorrectionButtonList.clear();
+			}
+			if(results != null){
+			// create new hint buttons
+				for (int i = 0; i < results.length; i++) {
+						Button myButton = new Button(getApplicationContext());
+						CorrectionButtonList.add(myButton);
+						myButton.setText(results[i]);
+						myButton.setId(100 + i);
+						myButton.setTextColor(Color.BLACK);
+						myButton.setWidth(30);
+						myButton.setHeight(30);
+						
+						RelativeLayout.LayoutParams rp = new RelativeLayout.LayoutParams(
+								LayoutParams.WRAP_CONTENT,
+								LayoutParams.WRAP_CONTENT);
+						rp.addRule(RelativeLayout.ABOVE, R.id.inputChar);
+						if (0 != i) {
+							rp.addRule(RelativeLayout.RIGHT_OF,
+									myButton.getId() - 1);
+						}
+						myButton.setLayoutParams(rp);
+						rl.addView(myButton);
+					}
 				}
 			}
 		});
@@ -467,6 +505,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	 * backspace input and then click backspace, we regard this as
 	 */
 	public void onClickButtonBackSpace(View view) {
+		dictionaryControllor.deleteLastChar();
 		int len = charas.length();
 		//deal with KNN		
 		//deal with UI
@@ -484,69 +523,69 @@ public class TestingActivity extends Activity implements RecBufListener{
 	 * This fuction is called when user click Save button on screen
 	 * It saves current KNN training set to file
 	 */
-	public void onClickSave(View view) {
-		LayoutInflater li = LayoutInflater.from(context);
-		View promptsView = li.inflate(R.layout.dialog_savingknn, null);
-
-		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
-				context);
-
-		// set prompts.xml to alertdialog builder
-		alertDialogBuilder.setView(promptsView);
-
-		final EditText userInput = (EditText) promptsView
-				.findViewById(R.id.editTextFileName);
-
-		// set dialog message
-		alertDialogBuilder
-			.setCancelable(false)
-			.setPositiveButton("OK",
-			  new DialogInterface.OnClickListener() {
-			    public void onClick(DialogInterface dialog,int id) {
-				// get user input and set it to result
-				// edit text
-			    	String fileName = userInput.getText().toString();
-					
-					String state = Environment.getExternalStorageState();
-				    if (!Environment.MEDIA_MOUNTED.equals(state)) {
-				    	Log.e("save KNN", "Directory not created");
-				    }
-				    File sdCard = Environment.getExternalStorageDirectory();
-				    File dir = new File (sdCard.getAbsolutePath() + "/UbiK");
-				    File file = new File(dir,   fileName);	    	
-				   
-				    
-				    
-				    boolean b = mKNN.save(file);
-				    String msg;
-				    if(b== true){
-				    	msg = "Save kNN file successfully! You can load it in future.";
-				    }else{
-				    	msg = "Something wrong happens when saving kNN file!";
-				    }
-				    new AlertDialog.Builder(context)
-				    .setTitle("Save kNN")
-				    .setMessage(msg)
-				    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-				        public void onClick(DialogInterface dialog, int which) { 
-				            // continue with delete
-				        }
-				     })
-				     .show();
-			    }
-			  })
-			.setNegativeButton("Cancel",
-			  new DialogInterface.OnClickListener() {
-			    public void onClick(DialogInterface dialog,int id) {
-				dialog.cancel();
-			    }
-			  });
-		AlertDialog alertDialog = alertDialogBuilder.create();
-		 
-		// show it
-		alertDialog.show();		
-		
-	}
+//	public void onClickSave(View view) {
+//		LayoutInflater li = LayoutInflater.from(context);
+//		View promptsView = li.inflate(R.layout.dialog_savingknn, null);
+//
+//		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+//				context);
+//
+//		// set prompts.xml to alertdialog builder
+//		alertDialogBuilder.setView(promptsView);
+//
+//		final EditText userInput = (EditText) promptsView
+//				.findViewById(R.id.editTextFileName);
+//
+//		// set dialog message
+//		alertDialogBuilder
+//			.setCancelable(false)
+//			.setPositiveButton("OK",
+//			  new DialogInterface.OnClickListener() {
+//			    public void onClick(DialogInterface dialog,int id) {
+//				// get user input and set it to result
+//				// edit text
+//			    	String fileName = userInput.getText().toString();
+//					
+//					String state = Environment.getExternalStorageState();
+//				    if (!Environment.MEDIA_MOUNTED.equals(state)) {
+//				    	Log.e("save KNN", "Directory not created");
+//				    }
+//				    File sdCard = Environment.getExternalStorageDirectory();
+//				    File dir = new File (sdCard.getAbsolutePath() + "/UbiK");
+//				    File file = new File(dir,   fileName);	    	
+//				   
+//				    
+//				    
+//				    boolean b = mKNN.save(file);
+//				    String msg;
+//				    if(b== true){
+//				    	msg = "Save kNN file successfully! You can load it in future.";
+//				    }else{
+//				    	msg = "Something wrong happens when saving kNN file!";
+//				    }
+//				    new AlertDialog.Builder(context)
+//				    .setTitle("Save kNN")
+//				    .setMessage(msg)
+//				    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+//				        public void onClick(DialogInterface dialog, int which) { 
+//				            // continue with delete
+//				        }
+//				     })
+//				     .show();
+//			    }
+//			  })
+//			.setNegativeButton("Cancel",
+//			  new DialogInterface.OnClickListener() {
+//			    public void onClick(DialogInterface dialog,int id) {
+//				dialog.cancel();
+//			    }
+//			  });
+//		AlertDialog alertDialog = alertDialogBuilder.create();
+//		 
+//		// show it
+//		alertDialog.show();		
+//		
+//	}
 
 	
 	

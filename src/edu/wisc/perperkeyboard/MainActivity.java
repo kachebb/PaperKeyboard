@@ -42,7 +42,7 @@ public class MainActivity extends Activity implements RecBufListener{
 	public static final String EXTRANAME = "edu.wisc.perperkeyboard.KNN";
 	private static final String LTAG = "Kaichen Debug";
 	public static final int STROKE_CHUNKSIZE = 2000;
-	private static int TRAINNUM = 1; //how many keystroke we need to get for each key when training 
+	private static int TRAINNUM = 5; //how many keystroke we need to get for each key when training 
 	public static BasicKNN mKNN;
 	private enum InputStatus {
 		All,//AtoZ, NUM,LEFT, RIGHT, BOTTOM
@@ -54,8 +54,8 @@ public class MainActivity extends Activity implements RecBufListener{
 	// expected chunk number in each stage
 //	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 5 };
 //	private final int[] ExpectedInputNum = { 3, 1, 4, 11, 6 };
-	private final int[] ExpectedInputNum = {27};
-	//private final int[] ExpectedInputNum = {26};	
+//	private final int[] ExpectedInputNum = {3};
+	private final int[] ExpectedInputNum = {27};	
 	private InputStatus inputstatus;
 	private Set<InputStatus> elements;
 	Iterator<InputStatus> it; 
@@ -420,86 +420,86 @@ public class MainActivity extends Activity implements RecBufListener{
 	 * This is a function to load mKNN from file
 	 * @param view
 	 */
-	public void onClickLoad(View view){
-		/********UI for load kNN file*********/
-		setContentView(R.layout.dialog_loadknn);
-		
-		
-		setContentView(R.layout.activity_main);
-		
-		LayoutInflater li = LayoutInflater.from(context);
-		View promptsView = li.inflate(R.layout.dialog_loadknn, null);
-
-		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
-				context);
-
-		// set prompts.xml to alertdialog builder
-		alertDialogBuilder.setView(promptsView);
-		List<String> fileList = new ArrayList<String>();
-		   
-		String state = Environment.getExternalStorageState();
-	    if (!Environment.MEDIA_MOUNTED.equals(state)) {
-	    	Log.e("save KNN", "Directory not created");
-	    }
-	    File sdCard = Environment.getExternalStorageDirectory();
-	    File dir = new File (sdCard.getAbsolutePath() + "/UbiK");
-	  
-	     File[] files = dir.listFiles();
-	     fileList.clear();
-	     for (File file : files){
-	      fileList.add(file.getPath());  
-	     }
-	     
-	    
-		ListView listview = (ListView) promptsView.findViewById(R.id.lv);
-		ArrayAdapter<String> directoryList = new ArrayAdapter<String>(this,
-			       android.R.layout.simple_list_item_1, fileList);
-		listview.setAdapter(directoryList); 	
-		listview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-
-		      @Override
-		      public void onItemClick(AdapterView<?> parent, final View view,
-		          int position, long id) {
-		        final String item = (String) parent.getItemAtPosition(position);
-		        view.animate().setDuration(2000).alpha(0)
-		            .withEndAction(new Runnable() {
-		              @Override
-		              public void run() {
-		                view.setAlpha(1);
-		                File file = new File (item);
-		                mKNN.load(file);
-		                Intent intent = new Intent(context, TestingActivity.class);
-		    		    startActivity(intent);
-		              }
-		            });
-		      }
-
-		});
-		// set dialog message
-		alertDialogBuilder
-			.setCancelable(false)
-			.setPositiveButton("OK",
-			  new DialogInterface.OnClickListener() {
-			    public void onClick(DialogInterface dialog,int id) {
-				// get user input and set it to result
-				// edit text
-			    	dialog.cancel();
-			    }
-			  })
-			.setNegativeButton("Cancel",
-			  new DialogInterface.OnClickListener() {
-			    public void onClick(DialogInterface dialog,int id) {
-				dialog.cancel();
-			    }
-			  });
-		AlertDialog alertDialog = alertDialogBuilder.create();
-		 
-		// show it
-		alertDialog.show();		
-	     
-		
-	}
-	
+//	public void onClickLoad(View view){
+//		/********UI for load kNN file*********/
+//		setContentView(R.layout.dialog_loadknn);
+//		
+//		
+//		setContentView(R.layout.activity_main);
+//		
+//		LayoutInflater li = LayoutInflater.from(context);
+//		View promptsView = li.inflate(R.layout.dialog_loadknn, null);
+//
+//		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+//				context);
+//
+//		// set prompts.xml to alertdialog builder
+//		alertDialogBuilder.setView(promptsView);
+//		List<String> fileList = new ArrayList<String>();
+//		   
+//		String state = Environment.getExternalStorageState();
+//	    if (!Environment.MEDIA_MOUNTED.equals(state)) {
+//	    	Log.e("save KNN", "Directory not created");
+//	    }
+//	    File sdCard = Environment.getExternalStorageDirectory();
+//	    File dir = new File (sdCard.getAbsolutePath() + "/UbiK");
+//	  
+//	     File[] files = dir.listFiles();
+//	     fileList.clear();
+//	     for (File file : files){
+//	      fileList.add(file.getPath());  
+//	     }
+//	     
+//	    
+//		ListView listview = (ListView) promptsView.findViewById(R.id.lv);
+//		ArrayAdapter<String> directoryList = new ArrayAdapter<String>(this,
+//			       android.R.layout.simple_list_item_1, fileList);
+//		listview.setAdapter(directoryList); 	
+//		listview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+//
+//		      @Override
+//		      public void onItemClick(AdapterView<?> parent, final View view,
+//		          int position, long id) {
+//		        final String item = (String) parent.getItemAtPosition(position);
+//		        view.animate().setDuration(2000).alpha(0)
+//		            .withEndAction(new Runnable() {
+//		              @Override
+//		              public void run() {
+//		                view.setAlpha(1);
+//		                File file = new File (item);
+//		                mKNN.load(file);
+//		                Intent intent = new Intent(context, TestingActivity.class);
+//		    		    startActivity(intent);
+//		              }
+//		            });
+//		      }
+//
+//		});
+//		// set dialog message
+//		alertDialogBuilder
+//			.setCancelable(false)
+//			.setPositiveButton("OK",
+//			  new DialogInterface.OnClickListener() {
+//			    public void onClick(DialogInterface dialog,int id) {
+//				// get user input and set it to result
+//				// edit text
+//			    	dialog.cancel();
+//			    }
+//			  })
+//			.setNegativeButton("Cancel",
+//			  new DialogInterface.OnClickListener() {
+//			    public void onClick(DialogInterface dialog,int id) {
+//				dialog.cancel();
+//			    }
+//			  });
+//		AlertDialog alertDialog = alertDialogBuilder.create();
+//		 
+//		// show it
+//		alertDialog.show();		
+//	     
+//		
+//	}
+//	
 	
 	/**
 	 * audio processing. extract features from audio. Add features to KNN.

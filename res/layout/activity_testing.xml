@@ -161,8 +161,8 @@
      
      <Button
 	    android:id="@+id/backSpace"
-	 
-	
+
+
         android:layout_width="250dp"
          android:layout_alignParentRight="true"
         android:layout_height = "wrap_content"
