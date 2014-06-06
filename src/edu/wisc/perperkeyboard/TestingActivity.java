@@ -1,6 +1,5 @@
 package edu.wisc.perperkeyboard;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,16 +8,13 @@ import java.util.List;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -36,11 +32,6 @@ import edu.wisc.jj.BasicKNN;
 import edu.wisc.jj.SPUtil;
 import edu.wisc.liyuan.dictionaryCorrection.DictionaryControllor;
 import edu.wisc.liyuan.dictionaryCorrection.DictionaryControllorImpl;
-import edu.wisc.liyuan.dictionaryCorrection.DictionaryCorrectior;
-import edu.wisc.liyuan.dictionaryCorrection.DictionaryCorrectorImpl;
-import edu.wisc.liyuan.dictionaryCorrection.WordCollector;
-import edu.wisc.liyuan.dictionaryCorrection.WordCollectorImpl;
-
 
 public class TestingActivity extends Activity implements RecBufListener{
 	/*************constant values***********************/
@@ -102,6 +93,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	@SuppressLint("NewApi")
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		//Debug.startMethodTracing("Creation");
 		super.onCreate(savedInstanceState);
 		/************init UI************************/
 		setContentView(R.layout.activity_testing);
@@ -179,8 +171,10 @@ public class TestingActivity extends Activity implements RecBufListener{
 		/********************dictionary**************************/
 		//use dict_2of12inf in resource/raw folder
 		this.mDict=new Dictionary(getApplicationContext(), R.raw.dict_2of12inf);
+		
 		/****************dictionaryInit****************************/
 		dictionaryControllor = new DictionaryControllorImpl(Environment.getExternalStorageDirectory() + getString(R.string.DictionaryFilePath));
+	//	Debug.stopMethodTracing();
 	}
 
 
@@ -313,12 +307,21 @@ public class TestingActivity extends Activity implements RecBufListener{
 		/********** detect using KNN *******/		
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K,hintsFromDict);
 		this.previousKey =  detectResult;	
+		long startTime = System.currentTimeMillis();
+
+//		Debug.startMethodTracing("Corrector",67108864);
 		if(detectResult.equals(" ")){
 			dictionaryControllor.clear();
 		}else{
 			dictionaryControllor.attach(detectResult.charAt(0));
 		}
 		results =  dictionaryControllor.getCorrectionList();
+		long endTime   = System.currentTimeMillis();
+		long totalTime = endTime - startTime;
+//		Debug.stopMethodTracing();
+		Log.d("CalTime",String.valueOf(totalTime));
+		Log.d("REACH","5");
+		
 
 		//add unsure sample to staging area
 		mKNN.addToStage(detectResult, features);
@@ -343,7 +346,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		final List<String> labels = mKNN.getHints(5,hintsFromDict);
 		//always show word_splitter as a hint
 		labels.add(WORD_SPLITTER);
-		
+		Log.d("REACH","6");
 		/************* update UI ********************/
 		//decide which character to show
 		this.updateData(detectResult);
@@ -406,7 +409,9 @@ public class TestingActivity extends Activity implements RecBufListener{
 				}
 			
 			
-
+				Log.d("REACH","7");
+				long startTime = System.currentTimeMillis();
+				
 			/********correction buttons*************/		
 			// rm all existing hint buttons on screen
 			if (null == CorrectionButtonList) {
@@ -419,7 +424,14 @@ public class TestingActivity extends Activity implements RecBufListener{
 			}
 			if(results != null){
 			// create new hint buttons
-				for (int i = 0; i < results.length; i++) {
+				int length;
+				if((results.length) > 9 ){
+					length=9;
+				}else{
+					length=results.length;
+				}
+				
+				for (int i = 0; i < length; i++) {
 						Button myButton = new Button(getApplicationContext());
 						CorrectionButtonList.add(myButton);
 						myButton.setText(results[i]);
@@ -440,7 +452,12 @@ public class TestingActivity extends Activity implements RecBufListener{
 						rl.addView(myButton);
 					}
 				}
+			Log.d("REACH","8");
+			long endTime   = System.currentTimeMillis();
+			long totalTime = endTime - startTime;
+			Log.d("UIUpdateTime",String.valueOf(totalTime));
 			}
+
 		});
 	}
 
@@ -498,6 +515,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		}
 	}
 */
+
 
 	/***
 	 * This fuction is called when user click backspace button on screen It

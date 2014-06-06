@@ -69,6 +69,26 @@ public class EditDistance {
   	return getDistance(word,similar,null);
   }  
   
+  public static final int distance(String a, String b) {
+      a = a.toLowerCase();
+      b = b.toLowerCase();
+      // i == 0
+      int [] costs = new int [b.length() + 1];
+      for (int j = 0; j < costs.length; j++)
+          costs[j] = j;
+      for (int i = 1; i <= a.length(); i++) {
+          // j == 0; nw = lev(i - 1, j)
+          costs[0] = i;
+          int nw = i - 1;
+          for (int j = 1; j <= b.length(); j++) {
+              int cj = Math.min(1 + Math.min(costs[j], costs[j - 1]), a.charAt(i - 1) == b.charAt(j - 1) ? nw : nw + 1);
+              nw = costs[j];
+              costs[j] = cj;
+          }
+      }
+      return costs[b.length()];
+  }
+  
   /**
    * Evaluates the distance between two words.
    * 
@@ -78,6 +98,9 @@ public class EditDistance {
    * word into a similar one.
    */
   public static final int getDistance(String word, String similar, int[][] matrix) {
+	  
+	  return distance(word,similar);
+	
     /* JMH Again, there is no need to have a global class matrix variable
      *  in this class. I have removed it and made the getDistance static final
      * DMV: I refactored this method to make it more efficient, more readable, and simpler.
@@ -87,7 +110,7 @@ public class EditDistance {
      * WRS: I added a distance for case comparison, so a misspelling of "i" would be closer to "I" than
      * to "a".
      */
-
+	  /* 
   	//Allocate memory outside of the loops. 
   	int i;
   	int j;
@@ -151,6 +174,7 @@ public class EditDistance {
       System.out.println(dumpMatrix(word, similar, matrix));
 
     return matrix[a_size - 1][b_size - 1];
+    */
   }
 
   /**

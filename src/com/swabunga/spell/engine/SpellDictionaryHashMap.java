@@ -49,7 +49,7 @@ public class SpellDictionaryHashMap extends SpellDictionaryASpell {
    *  dictionary hash map. Interested to see what the performance of a
    *  smaller initial capacity is like.
    */
-  private final static int INITIAL_CAPACITY = 16000;//16 * 1024;
+  private final static int INITIAL_CAPACITY = 1600;//16 * 1024;
 
   /**
    * The hashmap that contains the word dictionary. The map is hashed on the doublemeta

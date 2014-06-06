@@ -19,6 +19,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 package com.swabunga.spell.event;
 
+import android.util.Log;
+
+import com.swabunga.spell.engine.ComparableWordByDistance;
 import com.swabunga.spell.engine.Configuration;
 import com.swabunga.spell.engine.SpellDictionary;
 import com.swabunga.spell.engine.SpellDictionaryHashMap;
@@ -416,22 +419,57 @@ public class SpellChecker {
     if (suggestions == null) {
        suggestions = new ArrayList(50);
     
+       Log.d("REACH", "1");
        for (Enumeration e = dictionaries.elements(); e.hasMoreElements();) {
            SpellDictionary dictionary = (SpellDictionary) e.nextElement();
            
-           if (dictionary != userdictionary)
-              VectorUtility.addAll(suggestions, dictionary.getSuggestions(word, threshold), false);
-       }
+           if (dictionary != userdictionary){
+        	   List<Word> result = dictionary.getSuggestions(word, threshold);
+               // Java's PriorityQueue class functions as a min heap
+               PriorityQueue<Word> heap = new PriorityQueue<Word>(result.size(),new Word());
+               
+               // Add each array element to the heap
+               for (Word w : result)
+                   heap.add(w);
+               int length = 30;
+               if(result.size()<30){
+            	   length = result.size();
+               }
+               
+               // Elements come off the heap in ascending order
+               for (int i=0; i<length; i++)
+            	   suggestions.add(heap.remove());
+           }
 
+       }
+       Log.d("REACH", "2");
        if (cache != null && cache.size() < cacheSize)
          cache.put(word, suggestions);
     }
     
-    VectorUtility.addAll(suggestions, userdictionary.getSuggestions(word, threshold), false);
+	   List<Word> result = userdictionary.getSuggestions(word, threshold);
+	   if(result.size()>=1){
+           // Java's PriorityQueue class functions as a min heap
+           PriorityQueue<Word> heap = new PriorityQueue<Word>(result.size(),new Word());
+           // Add each array element to the heap
+           for (Word w : result)
+               heap.add(w);
+           int length = 30;
+           if(result.size()<30){
+        	   length = result.size();
+           }
+           
+           // Elements come off the heap in ascending order
+           for (int i=0; i<length; i++)
+        	   suggestions.add(heap.remove());
+	   }
+
     suggestions.trimToSize();
     
     return suggestions;
   }
+  
+
 
   /**
   * Activates a cache with the maximum number of entries set to 300

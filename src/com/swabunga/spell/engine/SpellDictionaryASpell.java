@@ -26,6 +26,8 @@ import java.io.Reader;
 import java.security.InvalidParameterException;
 import java.util.*;
 
+//import com.esotericsoftware.minlog.Log;
+
 /**
  * Container for various methods that any <code>SpellDictionary</code> will use.
  * This class is based on the original Jazzy aspell port.
@@ -163,7 +165,11 @@ public abstract class SpellDictionaryASpell implements SpellDictionary {
       charArray[i] = b;
       charArray[i + 1] = a;
       String s = getCode(new String(charArray));
-      nearmisscodes.put(s, s);
+      if(s==null){
+      	android.util.Log.d("NULL",new String(charArray));
+      }else{
+          nearmisscodes.put(s, s);        	
+      }
       charArray[i] = a;
       charArray[i + 1] = b;
     }
@@ -178,7 +184,12 @@ public abstract class SpellDictionaryASpell implements SpellDictionary {
       for (j = 0; j < replacelist.length; j++) {
         charArray[i] = replacelist[j];
         String s = getCode(new String(charArray));
-        nearmisscodes.put(s, s);
+        if(s==null){
+        	android.util.Log.d("NULL",new String(charArray));
+        }else{
+            nearmisscodes.put(s, s);        	
+        }
+
       }
       charArray[i] = original;
     }
@@ -190,7 +201,11 @@ public abstract class SpellDictionaryASpell implements SpellDictionary {
       for (j = 0; j < replacelist.length; j++) {
         charArray[iy] = replacelist[j];
         String s = getCode(new String(charArray));
-        nearmisscodes.put(s, s);
+        if(s==null){
+        	android.util.Log.d("NULL",new String(charArray));
+        }else{
+            nearmisscodes.put(s, s);        	
+        }
       }
       if (iy == 0)
         break;
@@ -210,7 +225,11 @@ public abstract class SpellDictionaryASpell implements SpellDictionary {
     int ii = charArray2.length;
     while (true) {
       String s = getCode(new String(charArray));
-      nearmisscodes.put(s, s);
+      if(s==null){
+      	android.util.Log.d("NULL",new String(charArray));
+      }else{
+          nearmisscodes.put(s, s);        	
+      }
       if (ii == 0)
         break;
       b = a;
