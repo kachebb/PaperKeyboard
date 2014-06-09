@@ -28,6 +28,7 @@ import android.util.Log;
  */
 public class BasicKNN implements KNN{
 	List<Item> trainingSet;
+	List<Item> workingSet; // current working set for KNN detection 	
 	Item[] closestList;
 	public final int DISTTHRE = 1;
 	private int trainingSize = 3; // number of training samples to keep for each
@@ -45,7 +46,7 @@ public class BasicKNN implements KNN{
 	private double[] variances;
 
 	public BasicKNN() {
-		this.trainingSet = Collections.synchronizedList(new ArrayList<Item>());
+		this.trainingSet = new ArrayList<Item>();
 	}
 	
 	/**

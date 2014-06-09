@@ -29,7 +29,7 @@
 			<string name="button_Save">Save</string>
 			<string name="saveFile">File Name:</string>
 			<string name="loadknn">Load Training from File</string>
-	 <string name="DictionaryFilePath">/test.dic</string>
+	 <string name="DictionaryFilePath">/5000.dic</string>
 	
 	
 </resources>

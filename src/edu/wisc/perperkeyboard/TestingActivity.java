@@ -2,6 +2,7 @@ package edu.wisc.perperkeyboard;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -286,13 +287,12 @@ public class TestingActivity extends Activity implements RecBufListener{
 	/**
 	 * audio processing. extract features from audio. Add features to KNN.
 	 */
-	String[] results;
 	public void runAudioProcessing(short[] audioStroke) {
 		// separate left and right channel
 		short[][] audioStrokeData = KeyStroke.seperateChannels(audioStroke);
 		// get features
 		double[] features= SPUtil.getAudioFeatures(audioStrokeData);
-		
+
 		/*********get hints from dictionary*****************/
 		List<String> hintsFromDict=null;
 		if (this.dictStatus){
@@ -309,18 +309,22 @@ public class TestingActivity extends Activity implements RecBufListener{
 			Log.d(LTAG,"to dictionary:" +unfinishedWord);		
 			hintsFromDict=mDict.getPossibleChar(unfinishedWord);
 		}
-		
+
 		/********** detect using KNN *******/		
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K,hintsFromDict);
 		this.previousKey =  detectResult;	
 		long startTime = System.currentTimeMillis();
 
+		final String[] aDictHints;		
+		/************ use dictionary controller to get another hints ************/
 		if(detectResult.equals(" ")){
 			dictionaryControllor.clear();
 		}else{
 			dictionaryControllor.attach(detectResult.charAt(0));
 		}
-		results =  dictionaryControllor.getCorrectionList();
+		aDictHints =  dictionaryControllor.getCorrectionList();
+		Log.d("liyuan dict:", Arrays.toString(aDictHints));
+		
 		long endTime   = System.currentTimeMillis();
 		long totalTime = endTime - startTime;
 		Log.d("CalTime",String.valueOf(totalTime));
@@ -332,7 +336,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		//mKNN.addToStage(detectResult, features);
 		
 		/**********statistic***************/
-		stat.addInput(0,detectResult); //we suppose the input is correct		
+//		stat.addInput(0,detectResult); //we suppose the input is correct		
 
 		
 		/**********caps and shift*******/
@@ -351,7 +355,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		final List<String> labels = mKNN.getHints(5,hintsFromDict);
 		//always show word_splitter as a hint
 		labels.add(WORD_SPLITTER);
-		Log.d("REACH","6");
+
 		/************* update UI ********************/
 		//decide which character to show
 		this.updateData(detectResult);
@@ -363,65 +367,68 @@ public class TestingActivity extends Activity implements RecBufListener{
 				// if(clickTimes < 2){
 				/***Update UI********/
 				updateUI();
-				
-				/********hint buttons*************/
-				RelativeLayout rl = (RelativeLayout) findViewById(R.id.testActivity_layout);				
-				// rm all existing hint buttons on screen
-				if (null == hintButtonList) {
-					hintButtonList = new LinkedList<Button>();
-				} else {
-					for (Button mButton : hintButtonList) {
-						rl.removeView(mButton);
-					}
-					hintButtonList.clear();
-				}
-				// create new hint buttons
-				for (int i = 0; i < labels.size(); i++) {
-					Button myButton = new Button(getApplicationContext());
-					hintButtonList.add(myButton);
-					myButton.setText(labels.get(i));
-					myButton.setId(100 + i);
-					myButton.setTextColor(Color.BLACK);
-					myButton.setWidth(30);
-					myButton.setHeight(30);
-					myButton.setOnClickListener(new OnClickListener() {
-						@Override
-						public void onClick(View v) {
-							String correctionString = ((Button)v).getText().toString();
-							if(charas.contains(" ")){
-								String strs[] = charas.split(" ");
-								strs[strs.length-1] = correctionString;
-								StringBuffer sb = new StringBuffer();
-								for(String s:strs){
-									sb.append(s);
-									sb.append(" ");
-								}
-								charas=sb.toString();
-							}
-							updateUI();
+
+				if (dictStatus){
+					/********hint buttons*************/
+					RelativeLayout rl = (RelativeLayout) findViewById(R.id.testActivity_layout);				
+					// rm all existing hint buttons on screen
+					if (null == hintButtonList) {
+						hintButtonList = new LinkedList<Button>();
+					} else {
+						for (Button mButton : hintButtonList) {
+							rl.removeView(mButton);
 						}
-					});
-					RelativeLayout.LayoutParams rp = new RelativeLayout.LayoutParams(
-							LayoutParams.WRAP_CONTENT,
-							LayoutParams.WRAP_CONTENT);
-					rp.width=130;
-					rp.height=100;					
-					rp.addRule(RelativeLayout.BELOW, R.id.text_detectionResult);
-					if (0 != i) {
-						rp.addRule(RelativeLayout.RIGHT_OF,
-								myButton.getId() - 1);
+						hintButtonList.clear();
 					}
-					myButton.setTextColor(Color.parseColor("#000000"));
-					myButton.setLayoutParams(rp);
-					rl.addView(myButton);
+					// create new hint buttons
+					for (int i = 0; i < labels.size(); i++) {
+						Button myButton = new Button(getApplicationContext());
+						hintButtonList.add(myButton);
+						myButton.setText(labels.get(i));
+						myButton.setId(100 + i);
+						myButton.setTextColor(Color.BLACK);
+						myButton.setWidth(30);
+						myButton.setHeight(30);
+						myButton.setOnClickListener(new OnClickListener() {
+							@Override
+							public void onClick(View v) {
+								String correctionString = ((Button)v).getText().toString();
+					        	mKNN.correctWrongDetection( correctionString,previousKey);
+								if(charas.contains(" ")){
+									String strs[] = charas.split(" ");
+									strs[strs.length-1] = correctionString;
+									StringBuffer sb = new StringBuffer();
+									for(String s:strs){
+										sb.append(s);
+										sb.append(" ");
+									}
+									charas=sb.toString();
+								}
+								updateUI();
+							}
+						});
+						RelativeLayout.LayoutParams rp = new RelativeLayout.LayoutParams(
+								LayoutParams.WRAP_CONTENT,
+								LayoutParams.WRAP_CONTENT);
+						rp.width=130;
+						rp.height=100;					
+						rp.addRule(RelativeLayout.BELOW, R.id.text_detectionResult);
+						if (0 != i) {
+							rp.addRule(RelativeLayout.RIGHT_OF,
+									myButton.getId() - 1);
+						}
+						myButton.setTextColor(Color.parseColor("#000000"));
+						myButton.setLayoutParams(rp);
+						rl.addView(myButton);
+					}
 				}
 			
 			
-				Log.d("REACH","7");
-				long startTime = System.currentTimeMillis();
+			long startTime = System.currentTimeMillis();
 				
-			/********correction buttons*************/		
+			/********correction buttons from liyuan's dictionary*************/		
 			// rm all existing hint buttons on screen
+			RelativeLayout rl = (RelativeLayout) findViewById(R.id.testActivity_layout);											
 			if (null == CorrectionButtonList) {
 				CorrectionButtonList = new LinkedList<Button>();
 			} else {
@@ -430,23 +437,24 @@ public class TestingActivity extends Activity implements RecBufListener{
 				}
 				CorrectionButtonList.clear();
 			}
-			if(results != null){
-			// create new hint buttons
+			//result are hints getting back from dict controller
+			if(aDictHints != null){
+				// 	create new hint buttons
 				int length;
-				if((results.length) > 9 ){
-					length=9;
+				if((aDictHints.length) > 5 ){
+					length=5;
 				}else{
-					length=results.length;
+					length=aDictHints.length;
 				}
 				
 				for (int i = 0; i < length; i++) {
 						Button myButton = new Button(getApplicationContext());
 						CorrectionButtonList.add(myButton);
-						myButton.setText(results[i]);
+						myButton.setText(aDictHints[i]);
 						myButton.setId(100 + i);
 						myButton.setTextColor(Color.BLACK);
-						myButton.setWidth(30);
-						myButton.setHeight(30);
+//						myButton.setWidth(30);
+//						myButton.setHeight(30);
 						
 						RelativeLayout.LayoutParams rp = new RelativeLayout.LayoutParams(
 								LayoutParams.WRAP_CONTENT,
@@ -460,7 +468,6 @@ public class TestingActivity extends Activity implements RecBufListener{
 						rl.addView(myButton);
 					}
 				}
-			Log.d("REACH","8");
 			long endTime   = System.currentTimeMillis();
 			long totalTime = endTime - startTime;
 			Log.d("UIUpdateTime",String.valueOf(totalTime));
