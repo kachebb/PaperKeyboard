@@ -57,7 +57,9 @@
          android:layout_width="wrap_content"
          android:layout_height="wrap_content"
          android:layout_alignParentRight="true"
-         android:layout_alignParentTop="true"         
+         android:layout_alignParentTop="true"
+         android:layout_toLeftOf="@id/text_detectionResult"
+                  
       	 android:gravity="center"
          android:hint = "@string/inputTimes" />
 
@@ -131,7 +133,7 @@
         android:text="@string/button_Dict" 
      	android:onClick="onClickDict"
         />
-       
+<!--
        <Button
 	    android:id="@+id/button_Save"
         android:layout_width="wrap_content"
@@ -142,7 +144,17 @@
         android:text="@string/button_Save" 
      	android:onClick="onClickSave"
         />
+ -->       
      
+       <Button
+	    android:id="@+id/button_reset_training"
+        android:layout_width="wrap_content"
+        android:layout_height = "wrap_content"
+        android:layout_gravity = "center"
+        android:layout_alignRight="@+id/text_inputTimes"
+        android:layout_below="@id/button_Dict"
+        android:text="@string/reset_training" 
+        />
        
      <EditText
          android:id="@+id/inputChar"

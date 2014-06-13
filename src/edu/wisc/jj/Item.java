@@ -35,6 +35,18 @@ public class Item {
 			this.features[i] = features[i];
 	}
 	
+	/**
+	 * modify wrongTimes, inc is the increment adding
+	 * @param inc
+	 */
+	public void modiWT(int inc){
+		this.wrongTimes += inc;
+		if (this.wrongTimes >= 3){
+			this.wrongTimes = 3;
+		} else if (this.wrongTimes <=-3)
+			this.wrongTimes = -3;
+	}
+	
 	@Override
 	/**
 	 * Item to string should in the following format: "category:feature1,feature2,feature3...."
@@ -44,8 +56,8 @@ public class Item {
 		//append wrong times
 		output.append("wrong:"+String.valueOf(this.wrongTimes)+"==");
 		int printSize=this.features.length;
-		/*if (printSize > 5)
-			printSize=5;*/
+		if (printSize > 3)
+			printSize=3;
 		for (int index=0;index<printSize;index++){
 			output.append(features[index]);
 			output.append(",");

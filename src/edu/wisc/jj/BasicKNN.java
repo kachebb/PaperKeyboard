@@ -27,12 +27,15 @@ import android.util.Log;
  * 
  */
 public class BasicKNN implements KNN{
-	List<Item> trainingSet;
+	List<Item> trainingSet; // total training set. existing for deletetion without limit
+	List <Item> trainingSet_snap;//snap shot of current traing Set
 	List<Item> workingSet; // current working set for KNN detection 	
 	Item[] closestList;
 	public final int DISTTHRE = 1;
-	private int trainingSize = 3; // number of training samples to keep for each
-									// category. default 5
+	// number of training samples to keep for each
+	// category. default 5
+	//important: when you change this, change TRAINUM in MainActivity
+	private int trainingSize = 5; 
 	private Item staged;
 	// sorted item's categories given distance. updated each time when classify
 	// is called
@@ -47,6 +50,7 @@ public class BasicKNN implements KNN{
 
 	public BasicKNN() {
 		this.trainingSet = new ArrayList<Item>();
+		this.workingSet = new ArrayList<Item>();		
 	}
 	
 	/**
@@ -111,7 +115,7 @@ public class BasicKNN implements KNN{
 		return Arrays.copyOf(this.closestList, this.closestList.length);
 	}
 
-	/**
+	/** NOT USED ANYMORE
 	 * remove indexth element in the closestList being passed into this function
 	 * from the training set
 	 * 
@@ -121,8 +125,9 @@ public class BasicKNN implements KNN{
 	 *         set, false if there is no such element in traing set
 	 */
 	public boolean removeItemInClosestList(Item[] closestList, int index) {
-		Item removeItem = closestList[index];
-		return this.trainingSet.remove(removeItem);
+		return false;
+//		Item removeItem = closestList[index];
+//		return this.trainingSet.remove(removeItem);
 	}
 
 	/***
@@ -163,11 +168,12 @@ public class BasicKNN implements KNN{
 	 *         array of nearest neighbors
 	 */
 	public String classify(double[] testData, int k,List<String> dictHints) {
+		//IMPORTANT METHOD: generate current working set for detection
 		// commit whatever in staging area into trainingset
 		this.commit();
 
 		// update variances array for calculating distance
-		this.updateVariances();
+		this.updateVariances(this.workingSet);
 
 		// create new sortedItem map
 		this.sortedItemMap = new TreeMap<Double, String>();
@@ -177,7 +183,7 @@ public class BasicKNN implements KNN{
 
 		// check k's value. if number of k is larger than the total number entry
 		// in trainingData, then exit
-		if (k > this.trainingSet.size()) {
+		if (k > this.workingSet.size()) {
 			System.out
 					.println("ERROR: k's value is larger than training set entry numbers");
 			System.exit(1);
@@ -190,15 +196,15 @@ public class BasicKNN implements KNN{
 		// array as closest
 		double topBound = Double.MAX_VALUE;
 		for (int i = 0; i < nns.length; i++) {
-			double distance = findDistance(tItem, this.trainingSet.get(i));
-			topBound = addItemToTop(this.trainingSet.get(i), nns, distance);
+			double distance = findDistance(tItem, this.workingSet.get(i));
+			topBound = addItemToTop(this.workingSet.get(i), nns, distance);
 
 			// update sortedItemMap
-			this.sortedItemMap.put(distance, this.trainingSet.get(i).category);
+			this.sortedItemMap.put(distance, this.workingSet.get(i).category);
 		}
 		// find kNN in trainingData
-		for (int i = nns.length; i < this.trainingSet.size(); i++) {
-			Item rItem = this.trainingSet.get(i);
+		for (int i = nns.length; i < this.workingSet.size(); i++) {
+			Item rItem = this.workingSet.get(i);
 			double distance = findDistance(tItem, rItem);
 			// update sortedItemMap
 			this.sortedItemMap.put(distance, rItem.category);
@@ -233,9 +239,9 @@ public class BasicKNN implements KNN{
 			String catResult) {
 		for (Item mItem : closestList) {
 			if (mItem.category.equals(catResult))
-				mItem.wrongTimes--;
+				mItem.modiWT(-1);
 			else
-				mItem.wrongTimes++;
+				mItem.modiWT(1);				
 		}
 	}
 
@@ -253,16 +259,14 @@ public class BasicKNN implements KNN{
 		this.staged.category = correctLabel;
 		for (Item mItem : this.closestList) {
 			if (correctLabel.equals(mItem.category)) { // positive influence
-				mItem.wrongTimes = mItem.wrongTimes - 2; // 2 instead of 1 to
+				mItem.modiWT(-2); // 2 instead of 1 to
 															// counter the 1
 															// added for
 															// detecting wrong
 															// in
 															// updatewrongTimesAfterClassify
 			} else if (wrongLabel.equals(mItem.category)) { // negative influce
-				mItem.wrongTimes = mItem.wrongTimes + 2;
-			} else { // negative influence
-				mItem.wrongTimes++;
+				mItem.modiWT(2);
 			}
 		}
 		return true;
@@ -384,23 +388,23 @@ public class BasicKNN implements KNN{
 	/**
 	 * update variance array for standardizing euclidean distance
 	 */
-	private void updateVariances() {
-		if (0 == this.trainingSet.size()) {
+	private void updateVariances(List<Item> curWorkingSet) {
+		if (0 == curWorkingSet.size()) {
 			System.out.println("No item in the training set");
 			return;
 		}
-		this.variances = new double[this.trainingSet.get(0).features.length];
+		this.variances = new double[curWorkingSet.get(0).features.length];
 		// calculate variances for each dimension
 		for (int i = 0; i < this.variances.length; i++) {
 			double sumSquare = 0.0;
 			double sumMean = 0.0;
-			for (int j = 0; j < this.trainingSet.size(); j++) {
-				double value = this.trainingSet.get(j).features[i];
+			for (int j = 0; j < curWorkingSet.size(); j++) {
+				double value = curWorkingSet.get(j).features[i];
 				sumSquare += value * value;
 				sumMean += value;
 			}
-			sumMean = sumMean / (double) this.trainingSet.size();
-			sumSquare = sumSquare / (double) this.trainingSet.size();
+			sumMean = sumMean / (double) curWorkingSet.size();
+			sumSquare = sumSquare / (double) curWorkingSet.size();
 			this.variances[i] = sumSquare - sumMean * sumMean;
 		}
 	}
@@ -614,44 +618,72 @@ public class BasicKNN implements KNN{
 	 * training set according to the wrongTime of item, but always add the new
 	 * item at staging in (won't kick it out immediately, since there is no prev
 	 * history).
+	 * 
+	 * Right now, it also generates the working set. IMPORTANT
 	 */
 	public void commit() {
-		// make sure the new point get added in
+		// make sure the new point get added in ??
 		if (null != this.staged) {
 			this.staged.wrongTimes = Integer.MIN_VALUE;
 			this.addTrainingItem(this.staged);
 		}
-		Map<String, List<Item>> sampleMap = new HashMap<String, List<Item>>();
-		for (Item mItem : this.trainingSet) {
-			if (!sampleMap.containsKey(mItem.category)) {
+
+		//start backward in the training set so that for the latest objects gets 
+		// higher priority when their wrong times equals
+		Map<String, List<Item>> train_set_per_char = new HashMap<String, List<Item>>();
+		for (int idx = this.trainingSet.size()-1; idx>=0; idx--){
+			Item mItem = this.trainingSet.get(idx);
+			if (!train_set_per_char.containsKey(mItem.category)) {
 				List<Item> mList = new ArrayList<Item>();
 				mList.add(mItem);
-				sampleMap.put(mItem.category, mList);
+				train_set_per_char.put(mItem.category, mList);
 			} else { // contains
-				List<Item> mList = sampleMap.get(mItem.category);
+				List<Item> mList = train_set_per_char.get(mItem.category);
 				mList.add(mItem);
 			}
 		}
-		for (Map.Entry<String, List<Item>> mEntry : sampleMap.entrySet()) {
+		
+		////////////////////////////////////
+		//generate a new working set as KNN existing data points
+		////////////////////////////////////
+		this.workingSet.clear();
+		for (Map.Entry<String, List<Item>> mEntry : train_set_per_char.entrySet()) {
 			List<Item> mList = mEntry.getValue();
-			if (mList.size() > this.trainingSize) { // need to kick out the
-													// point with largest
-													// wrongTimes
-				Item out = mList.get(0);
-				int maxWrong = out.wrongTimes;
-				for (int i = 1; i < mList.size(); i++) {
-					Item curItem = mList.get(i);
-					if (curItem.wrongTimes > maxWrong) {
-						out = curItem;
-						maxWrong = curItem.wrongTimes;
-					}
+			//1. sort items based on their wrong times
+			TreeMap<Integer, List<Item>> spl_lst_per_cat = new TreeMap<Integer, List<Item>>();
+			for (Item eachItem: mList){
+				// if there is no such wrong time value in the dictionary, then create a new list 
+				if (!spl_lst_per_cat.containsKey(eachItem.wrongTimes)) {
+					List<Item> item_lst_base_wrongTimes= new ArrayList<Item>();
+					item_lst_base_wrongTimes.add(eachItem);
+					spl_lst_per_cat.put(eachItem.wrongTimes, item_lst_base_wrongTimes);
+				} else {
+					// if there is already such a wrong time value as key, just add the new item in
+					List<Item> cur_list= spl_lst_per_cat.get(eachItem.wrongTimes);
+					cur_list.add(eachItem);
 				}
-				this.trainingSet.remove(out);
+			}
+			//2. grab items with smallest value of wrong times
+			int cur_num_per_char=0; //number of training item added to working set for a particular character
+			for (Map.Entry<Integer, List<Item>> eachEntry: spl_lst_per_cat.entrySet()){
+				//double break needed for correct operations
+				if (cur_num_per_char == this.trainingSize)
+					break;
+				//when we've added enough training items for each character, then stop adding more for the same character
+				List<Item> item_lst_per_wrongTimes=eachEntry.getValue();
+				for (Item eachItem: item_lst_per_wrongTimes){
+					Log.d("wrongTimes", mEntry.getKey()+": "+eachItem.toString());
+					this.workingSet.add(eachItem);
+					cur_num_per_char++;
+					if (cur_num_per_char == this.trainingSize)
+						break;
+				}
 			}
 		}
+		
 		// after adding staged in, correct it wrong times
 		if (null != this.staged) {
-			this.staged.wrongTimes = 0;
+			this.staged.wrongTimes = -2;
 			this.staged = null;
 		}
 	}
@@ -748,6 +780,38 @@ public class BasicKNN implements KNN{
 		}
 //		String[] hintsArray = allHints.toArray(new String[allHints.size()]);
 		return allHints;
+	}
+
+	/**
+	 * take a snapshot of current training set 
+	 * shallow copy
+	 */
+	public void snapShot(){
+		if (null==this.trainingSet_snap){
+			this.trainingSet_snap= new ArrayList<Item>();
+		}
+		for (Item eachItem:this.trainingSet)
+			this.trainingSet_snap.add(eachItem);
+	}
+
+	/**
+	 * revert back to the original training set
+	 * ignore the online adaptation added training set
+	 */
+	public void reset() {
+		if (null == this.trainingSet_snap){
+			Log.e("knn", "try to reset training set. but no snap shot available");
+		} else{
+			// revert back to snap shot, change all wrong times back to 0
+			Log.d("knn", "revert back to original training set");
+			this.trainingSet.clear();;			
+			for (Item eachItem:this.trainingSet_snap){
+				this.trainingSet.add(eachItem);
+			}
+			for (Item each: this.trainingSet){
+				each.wrongTimes=0;
+			}
+		}
 	}
 }
 

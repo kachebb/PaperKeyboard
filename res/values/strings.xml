@@ -30,6 +30,7 @@
 			<string name="saveFile">File Name:</string>
 			<string name="loadknn">Load Training from File</string>
 	 <string name="DictionaryFilePath">/5000.dic</string>
-	
-	
+	 <string name="reset_training">reset</string>	 
+	 
+
 </resources>

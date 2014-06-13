@@ -55,6 +55,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	private ToggleButton CapsButton;
 //	private TextView recentAccuracyText;
 	private Button dictButton;
+	private Button resetButton; //reset training samples to just trainign phase	
 
 	/*************Audio Processing*******************/
 	private BasicKNN mKNN;
@@ -89,7 +90,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 	//use WORD_SPLITTER to separate words from words
 	//should be " ". right now for training simplicity, used an arbitrary character
 	private static final String WORD_SPLITTER = " ";	
-	private boolean dictStatus = false;
+	private boolean dictStatus;
 	
 	/********************DictionaryCorrector****************/
 	private DictionaryControllor dictionaryControllor;
@@ -115,6 +116,15 @@ public class TestingActivity extends Activity implements RecBufListener{
 		CapsButton = (ToggleButton) findViewById(R.id.toggle_caps);
 	//	recentAccuracyText = (TextView) findViewById(R.id.text_recentAccuracy);
 		dictButton = (Button) findViewById(R.id.button_Dict);
+		resetButton = (Button) findViewById(R.id.button_reset_training);
+		resetButton.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				//remove all the online added training set
+				//revert back to original trainign set
+				mKNN.reset();
+			}
+		});
 		editText.setOnClickListener(new View.OnClickListener() {
 		    @Override
 		    public void onClick(View v) {
@@ -151,10 +161,11 @@ public class TestingActivity extends Activity implements RecBufListener{
 		//Intent i = getIntent();
 		//mKNN = (KNN)i.getSerializableExtra("SampleObject");
 		mKNN = MainActivity.mKNN;
+		mKNN.snapShot();		
 		text.setText("Training Size:"+String.valueOf(mKNN.getTrainingSize()));
 //		debugKNN.setText(mKNN.getChars());
 		showDetectResult = new ArrayList<String>();
-		dictStatus = false;
+		dictStatus = true;
 		if(dictStatus) dictButton.setText("Using Dict");
 		else dictButton.setText("Non-Dict");
 		
@@ -180,7 +191,8 @@ public class TestingActivity extends Activity implements RecBufListener{
 		mGyro.GYRO_DESK_THRESHOLD = MainActivity.mGyro.GYRO_DESK_THRESHOLD;
 		/********************dictionary**************************/
 		//use dict_2of12inf in resource/raw folder
-		mDict=new Dictionary(getApplicationContext(), R.raw.dict_2of12inf);
+//		mDict=new Dictionary(getApplicationContext(), R.raw.dict_2of12inf);
+		mDict=new Dictionary(getApplicationContext(), R.raw.dic_5000);		
 		
 		/****************dictionaryInit****************************/
 		dictionaryControllor = new DictionaryControllorImpl(Environment.getExternalStorageDirectory() + getString(R.string.DictionaryFilePath));
@@ -238,7 +250,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 			// this assumption holds, since we are using 2000 
 			// data samples, (40ms) gyro will be updated around 4 times 
 			if (Math.abs(curTime-mGyro.lastTouchDeskTime) >= mGyro.DESK_TIME_INTERVAL){ 
-				Log.d("onRecBufFull", "no desk vibration feeled. not valid audio data. lastTouchDesktime: "+this.mGyro.lastTouchDeskTime + " .current time: "+curTime);
+				//Log.d("onRecBufFull", "no desk vibration feeled. not valid audio data. lastTouchDesktime: "+this.mGyro.lastTouchDeskTime + " .current time: "+curTime);
 				this.strokeAudioBuffer.clearValidIdx();
 				return;
 			}
@@ -296,9 +308,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		/*********get hints from dictionary*****************/
 		List<String> hintsFromDict=null;
 		if (this.dictStatus){
-//			String historyLower=charas.toLowerCase();
 			String historyLower=charas;			
-			Log.d(LTAG,"history lower :" +historyLower);
 			int splitterIndex=historyLower.lastIndexOf(WORD_SPLITTER.charAt(0));
 			int endIndex=(historyLower.length() >0)? historyLower.length():0;
 			Log.d(LTAG,"start index: "+(splitterIndex+1));		
@@ -313,27 +323,23 @@ public class TestingActivity extends Activity implements RecBufListener{
 		/********** detect using KNN *******/		
 		final String detectResult = mKNN.classify(features, this.CLASSIFY_K,hintsFromDict);
 		this.previousKey =  detectResult;	
-		long startTime = System.currentTimeMillis();
 
-		final String[] aDictHints;		
-		/************ use dictionary controller to get another hints ************/
-		if(detectResult.equals(" ")){
+		/*********** liyuan's word detection ***********/
+		long startTime = System.currentTimeMillis();
+		// if last one is a ' ', then clear previous string
+		if (charas.length()>0 && ' '==charas.charAt(charas.length()-1))
 			dictionaryControllor.clear();
-		}else{
+		// if current char is not " ", then attach it to dictionary
+		if(!detectResult.equals(" ")){
 			dictionaryControllor.attach(detectResult.charAt(0));
 		}
-		aDictHints =  dictionaryControllor.getCorrectionList();
-		Log.d("liyuan dict:", Arrays.toString(aDictHints));
-		
+		final String[] aDictHints =  dictionaryControllor.getCorrectionList();
 		long endTime   = System.currentTimeMillis();
 		long totalTime = endTime - startTime;
-		Log.d("CalTime",String.valueOf(totalTime));
-		Log.d("REACH","5");
 		
-
 		//add unsure sample to staging area
 		//TODO 
-		//mKNN.addToStage(detectResult, features);
+		mKNN.addToStage(detectResult, features);
 		
 		/**********statistic***************/
 //		stat.addInput(0,detectResult); //we suppose the input is correct		
@@ -352,7 +358,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 		
 		//get hints from KNN with regarding to the dictionary result
 		//argument is the number of hints needed
-		final List<String> labels = mKNN.getHints(5,hintsFromDict);
+		final List<String> labels = mKNN.getHints(6,hintsFromDict);
 		//always show word_splitter as a hint
 		labels.add(WORD_SPLITTER);
 
@@ -394,16 +400,21 @@ public class TestingActivity extends Activity implements RecBufListener{
 							public void onClick(View v) {
 								String correctionString = ((Button)v).getText().toString();
 					        	mKNN.correctWrongDetection( correctionString,previousKey);
-								if(charas.contains(" ")){
-									String strs[] = charas.split(" ");
-									strs[strs.length-1] = correctionString;
-									StringBuffer sb = new StringBuffer();
-									for(String s:strs){
-										sb.append(s);
-										sb.append(" ");
-									}
-									charas=sb.toString();
-								}
+					        	charas = charas.substring(0, charas.length()-1) + correctionString;
+					        	if (correctionString.equals(" ")){
+					        		dictionaryControllor.clear();
+					        	}
+//								if(charas.contains(" ")){
+//									String strs[] = charas.split(" ");
+//									strs[strs.length-1] = correctionString;
+//									StringBuffer sb = new StringBuffer();
+//									for(String s:strs){
+//										sb.append(s);
+//										sb.append(" ");
+//									}
+//									charas=sb.toString();
+//								}
+								
 								updateUI();
 							}
 						});
@@ -451,7 +462,7 @@ public class TestingActivity extends Activity implements RecBufListener{
 						Button myButton = new Button(getApplicationContext());
 						CorrectionButtonList.add(myButton);
 						myButton.setText(aDictHints[i]);
-						myButton.setId(100 + i);
+						myButton.setId(200 + i);
 						myButton.setTextColor(Color.BLACK);
 //						myButton.setWidth(30);
 //						myButton.setHeight(30);
@@ -465,12 +476,26 @@ public class TestingActivity extends Activity implements RecBufListener{
 									myButton.getId() - 1);
 						}
 						myButton.setLayoutParams(rp);
+						myButton.setOnClickListener(new OnClickListener() {
+							@Override
+							public void onClick(View v) {
+								String correctionString = ((Button)v).getText().toString();
+								//remove the trailing whitespace if there is any
+								charas=charas.trim();
+								int splitterIndex=charas.lastIndexOf(WORD_SPLITTER.charAt(0));
+								int endIndex=(charas.length() >0)? charas.length():0;
+								String oldWords="";
+								if ((splitterIndex+1) <=endIndex)
+									oldWords=charas.substring(0, splitterIndex+1);
+					        	charas = oldWords + correctionString + " ";
+					        	dictionaryControllor.clear();
+								updateUI();
+							}
+						});
+						
 						rl.addView(myButton);
 					}
 				}
-			long endTime   = System.currentTimeMillis();
-			long totalTime = endTime - startTime;
-			Log.d("UIUpdateTime",String.valueOf(totalTime));
 			}
 
 		});

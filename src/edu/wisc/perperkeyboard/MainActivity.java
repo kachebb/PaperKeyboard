@@ -44,8 +44,10 @@ public class MainActivity extends Activity implements RecBufListener{
 	//used to synchronize STROKE_CHUNKSIZE in test activity
 	static final int STROKE_CHUNKSIZE = 2000;
 	private static final int SAMPLING_RATE= 48000;
-	private static final int CHANNEL_COUNT = 2;	
-	private static int TRAINNUM = 5; //how many keystroke we need to get for each key when training
+	private static final int CHANNEL_COUNT = 2;
+	//how many keystroke we need to get for each key when training
+	//IMPORTANT: when you change this, change BasicKNN trainingSize
+	private static int TRAINNUM = 5; 
 
 	public static BasicKNN mKNN;
 	private enum InputStatus {
