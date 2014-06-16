@@ -29,8 +29,9 @@
 			<string name="button_Save">Save</string>
 			<string name="saveFile">File Name:</string>
 			<string name="loadknn">Load Training from File</string>
-	 <string name="DictionaryFilePath">/5000.dic</string>
+	 <string name="DictionaryFilePath">/dic_800.txt</string>
 	 <string name="reset_training">reset</string>	 
+	 <string name="clear_canvas">clean</string>	 	 
 	 
 
 </resources>

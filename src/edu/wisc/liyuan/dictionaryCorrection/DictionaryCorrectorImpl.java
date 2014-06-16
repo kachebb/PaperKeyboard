@@ -7,11 +7,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import android.util.Log;
 
 import com.swabunga.spell.engine.SpellDictionaryHashMap;
 import com.swabunga.spell.engine.Word;
@@ -31,7 +31,8 @@ public class DictionaryCorrectorImpl implements DictionaryCorrectior {
 		try {
 			prop.load(new FileReader(new File(CONFIGFILEPATH)));
 		} catch (IOException e) {
-			e.printStackTrace();
+			Log.d("dictionaryCorrectorImpl", "no configuration file given");
+//			e.printStackTrace();
 		}
 		DEFAULFILEPATH = prop.getProperty("DefaultFilePath");
 	}

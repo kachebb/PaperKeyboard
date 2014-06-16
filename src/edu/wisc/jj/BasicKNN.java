@@ -31,6 +31,9 @@ public class BasicKNN implements KNN{
 	List <Item> trainingSet_snap;//snap shot of current traing Set
 	List<Item> workingSet; // current working set for KNN detection 	
 	Item[] closestList;
+	//a list of array items to record the history of knn detection
+	// used for word correction, to reduce the wrong influence of wrongtimes
+	List<Item[]> closestListHistory;
 	public final int DISTTHRE = 1;
 	// number of training samples to keep for each
 	// category. default 5
@@ -50,7 +53,60 @@ public class BasicKNN implements KNN{
 
 	public BasicKNN() {
 		this.trainingSet = new ArrayList<Item>();
-		this.workingSet = new ArrayList<Item>();		
+		this.workingSet = new ArrayList<Item>();
+		this.closestListHistory=new ArrayList<Item[]>();
+	}
+	
+	/**
+	 * to counter the effect of wrongTimes update
+	 * from wrongly predicted word
+	 * clh: closest history list
+	 */
+	public void clhClear(){
+		this.closestListHistory.clear();
+	}
+	
+	/**
+	 * rectify wrong times using closest list history
+	 * @param wrongWord: the wrong word, corrected by word dictionary
+	 */
+	public void clhRect(String wrongWord){
+		if ( (null == wrongWord) || (wrongWord.isEmpty() ) ){
+				Log.d("knn", "nothing to rectify");			
+				return;
+		}
+		if ( (this.closestListHistory.size()+1) <wrongWord.length()){
+			Log.e("knn", "closest list history has fewer entries than the wrong word given!!");
+		} else {
+			if (null == this.staged){
+				Log.e("knn", "clhRect: no staged item!!");
+			}
+			else {
+				//the last char in string will be a staged item, but that doesn't matter
+				//since the wrongTimes has been updated after the detection
+				int idx = wrongWord.length()-1;
+				for (;idx>=0;idx--){
+					//find the last array
+					String resultChar = String.valueOf(wrongWord.charAt(idx));
+					Log.d("knn", "word prediction rect: "+ resultChar);					
+					Item[] crList= this.closestListHistory.get(this.closestListHistory.size()-1);
+					//for each item in the correspon
+					for (Item eachItem: crList){
+//						Log.d("before rect", eachItem.toString());
+						// the original correct prediction needs to add 1 to wrong time
+						// to rectify
+						if (eachItem.category.equals(resultChar)){
+							eachItem.modiWT(1);
+						} else { //original wrong prediction needs to subtract 1 to rectify
+							eachItem.modiWT(-1);							
+						}
+						Log.d("after rec", eachItem.toString());						
+					}
+					this.closestListHistory.remove(this.closestListHistory.size()-1);
+				}
+			}
+			this.staged=null;
+		}
 	}
 	
 	/**
@@ -81,6 +137,27 @@ public class BasicKNN implements KNN{
 		this.trainingSet.add(nItem);
 	}
 
+	/**
+	 * remove a few of last added training item 
+	 * @param num: number of last added training item to remove 
+	 */
+	public void removeLastTrainingItems(int num){
+		if (this.trainingSet.size() + 1< num){
+			Log.e("KNN", "remove the whole set by remove last training item");
+			this.trainingSet.clear();
+			this.staged=null;
+		} else {
+			this.staged=null; // remove staged first
+			int totalNumToRemove=num-1;
+			int removeNum=0;
+			while (removeNum < totalNumToRemove){
+				this.trainingSet.remove(this.trainingSet.size()-1);
+				Log.d("mknn", "after remove. left:"+this.trainingSet.size());
+				removeNum+=1;
+			}
+		}
+		
+	}
 	/**
 	 * add an array of training items to the training set
 	 * 
@@ -219,6 +296,8 @@ public class BasicKNN implements KNN{
 		for (int idx = 0; idx < nns.length; idx++) {
 			this.closestList[idx] = nns[idx].item;
 		}
+		//record such closest list
+		this.closestListHistory.add(closestList);
 		updateWrongTimesAfterClassify(this.closestList, catResult);
 		// record label predicted
 		this.lastPredictedLabel = catResult;
@@ -672,7 +751,7 @@ public class BasicKNN implements KNN{
 				//when we've added enough training items for each character, then stop adding more for the same character
 				List<Item> item_lst_per_wrongTimes=eachEntry.getValue();
 				for (Item eachItem: item_lst_per_wrongTimes){
-					Log.d("wrongTimes", mEntry.getKey()+": "+eachItem.toString());
+//					Log.d("add for char", mEntry.getKey()+": "+eachItem.toString());
 					this.workingSet.add(eachItem);
 					cur_num_per_char++;
 					if (cur_num_per_char == this.trainingSize)

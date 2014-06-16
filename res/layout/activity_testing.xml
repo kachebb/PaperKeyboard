@@ -27,16 +27,16 @@
          android:hint="@string/inputRate"
          android:textSize="13sp" />
 -->
+<!--        android:layout_width="fill_parent" -->
 
      <TextView
          android:id="@+id/text_detectionResult"
-         android:layout_width="fill_parent"
          android:layout_height="wrap_content"
+	     android:layout_width="450dp"         
          android:layout_alignParentLeft="true"
          android:layout_marginBottom="3dp"
          android:layout_marginTop="3dp"
          android:gravity="left"
-         android:hint="@string/detectionResult"
          android:textSize="30sp"
          android:scrollbarAlwaysDrawVerticalTrack="true"
          android:scrollbars="vertical"
@@ -63,6 +63,17 @@
       	 android:gravity="center"
          android:hint = "@string/inputTimes" />
 
+       
+       <Button
+	    android:id="@+id/clear_canvas"
+        android:layout_width="wrap_content"
+        android:layout_height = "wrap_content"
+        android:layout_gravity = "center"
+        android:layout_alignRight="@+id/text_inputTimes"
+        android:layout_below="@id/text_inputTimes"
+        android:text="@string/clear_canvas" 
+        />
+       
           
      <!--   
         <TextView
@@ -108,10 +119,11 @@
            android:layout_width="wrap_content"
            android:layout_height="wrap_content"
            android:layout_alignRight="@+id/text_inputTimes"
-           android:layout_below="@+id/text_inputTimes"
+           android:layout_below="@+id/clear_canvas"
            android:textOff="@string/toggleshift"
            android:textOn="@string/toggleshift" />
-       
+
+<!-- 
        <ToggleButton
      		 android:id="@+id/toggle_caps"
              android:layout_width="wrap_content"
@@ -120,7 +132,7 @@
              android:layout_below="@+id/toggle_shift"
              android:textOff="@string/togglecaps"
              android:textOn="@string/togglecaps" />
-
+ -->       
            
        <Button
 	    android:id="@+id/button_Dict"
@@ -129,7 +141,7 @@
         android:layout_gravity = "center"
         
         android:layout_alignRight="@+id/text_inputTimes"
-        android:layout_below="@id/toggle_caps"
+        android:layout_below="@id/toggle_shift"
         android:text="@string/button_Dict" 
      	android:onClick="onClickDict"
         />

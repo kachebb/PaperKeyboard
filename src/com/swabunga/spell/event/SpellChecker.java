@@ -425,6 +425,9 @@ public class SpellChecker {
            
            if (dictionary != userdictionary){
         	   List<Word> result = dictionary.getSuggestions(word, threshold);
+        	   Log.d("spellchecker", "result size: "+ result.size());
+        	   if (result.size()==0)
+        		   result.add(new Word());
                // Java's PriorityQueue class functions as a min heap
                PriorityQueue<Word> heap = new PriorityQueue<Word>(result.size(),new Word());
                

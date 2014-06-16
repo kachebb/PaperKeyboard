@@ -166,7 +166,7 @@ public abstract class SpellDictionaryASpell implements SpellDictionary {
       charArray[i + 1] = a;
       String s = getCode(new String(charArray));
       if(s==null){
-      	android.util.Log.d("NULL",new String(charArray));
+//      	android.util.Log.d("NULL",new String(charArray));
       }else{
           nearmisscodes.put(s, s);        	
       }
@@ -185,7 +185,7 @@ public abstract class SpellDictionaryASpell implements SpellDictionary {
         charArray[i] = replacelist[j];
         String s = getCode(new String(charArray));
         if(s==null){
-        	android.util.Log.d("NULL",new String(charArray));
+//        	android.util.Log.d("NULL",new String(charArray));
         }else{
             nearmisscodes.put(s, s);        	
         }
@@ -202,7 +202,7 @@ public abstract class SpellDictionaryASpell implements SpellDictionary {
         charArray[iy] = replacelist[j];
         String s = getCode(new String(charArray));
         if(s==null){
-        	android.util.Log.d("NULL",new String(charArray));
+//        	android.util.Log.d("NULL",new String(charArray));
         }else{
             nearmisscodes.put(s, s);        	
         }
@@ -226,7 +226,7 @@ public abstract class SpellDictionaryASpell implements SpellDictionary {
     while (true) {
       String s = getCode(new String(charArray));
       if(s==null){
-      	android.util.Log.d("NULL",new String(charArray));
+//      	android.util.Log.d("NULL",new String(charArray));
       }else{
           nearmisscodes.put(s, s);        	
       }

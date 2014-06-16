@@ -19,7 +19,7 @@ public class GyroHelper implements SensorEventListener{
 	
 	/********************constants for different gyro readings at different cases *****************/
 	public final long TOUCHSCREEN_TIME_INTERVAL=100000000;//100ms 	
-	public final long DESK_TIME_INTERVAL=50000000;//50ms
+	public final long DESK_TIME_INTERVAL=30000000;//30ms
 	private final float GYRO_TOUCHSCRREN_THRESHOLD=(float) 0.15;  //normal setting
 //	private final float GYRO_TOUCHSCRREN_THRESHOLD=(float) 0.50;  //debug with USB	
 	public float GYRO_DESK_THRESHOLD=(float)0.01;//0.012; 	
