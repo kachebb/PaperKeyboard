@@ -61,7 +61,7 @@ public class MainActivity extends Activity implements RecBufListener{
 //	private final int[] ExpectedInputNum = { 26, 12, 4, 11, 5 };
 //	private final int[] ExpectedInputNum = { 3, 1, 4, 11, 6 };
 //	private final int[] ExpectedInputNum = {3};
-	private final int[] ExpectedInputNum = {27};	
+	private final int[] ExpectedInputNum = {5};	
 
 	private InputStatus inputstatus;
 	private Set<InputStatus> elements;
