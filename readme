@@ -1,3 +1,11 @@
+Getting Started:
+1. Root your galaxy nexus
+2. Put files in mod_tiny into /system/bin directory in your galaxy nexus
+3. Run this app
+
+===== Update Log ===============
+
+
 Nov. 9:
 1.Touch screen can sometimes be regarded as a keystroke by this program.
 
